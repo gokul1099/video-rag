@@ -1,0 +1,13 @@
+
+__pycache__/
+*$py.class
+
+.Python
+build/
+
+.env
+.venv
+env/
+vevn/
+
+

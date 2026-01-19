@@ -1,0 +1,27 @@
+[project]
+name = "kubrick-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.3.1",
+    "fastapi[standard]>=0.128.0",
+    "fastmcp>=2.14.3",
+    "groq>=1.0.0",
+    "instructor>=1.14.4",
+    "ipykernel>=7.1.0",
+    "loguru>=0.7.3",
+    "opencv-python>=4.13.0.90",
+    "opik>=1.9.87",
+    "pixeltable>=0.5.12",
+    "pydantic-settings>=2.12.0",
+    "ruff>=0.14.13",
+]
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kubrick_api"]
+
+[tool.ruff]
+target-version = "py13"
