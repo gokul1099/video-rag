@@ -7,4 +7,7 @@ class UploadVideoResponse(BaseModel):
     video_path: str | None = None
     task_id: str | None = None
 
-    
+
+class ProcessVideoRequest(BaseModel):
+    video_path: str
+

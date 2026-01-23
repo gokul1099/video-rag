@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastmcp.client import Client
 from loguru import logger
-from kubrick_api.models import UploadVideoResponse
+from kubrick_api.models import UploadVideoResponse, ProcessVideoRequest
 import shutil
 
 class TaskStatus(str, Enum):
@@ -72,3 +72,23 @@ async def upload_video(file: UploadFile= File(...)):
         logger.error(f"Error uploading video : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/process-video")
+async def process_video(request: ProcessVideoRequest, bg_tasks: BackgroundTasks, fastapi_request: Request):
+    """
+    Process a video and return the results
+    """
+    task_id = str(uuid4())
+    bg_task_states = fastapi_request.app.state.bg_task_states
+
+    async def background_process_video(video_path: str, task_id: str):
+        """
+        Background task to process the video
+        """
+        bg_task_state[task_id] = TaskStatus.IN_PROGRESS
+        if not Path(video_path).exists():
+            bg_task_states[task_id] = TaskStatus.FAILED
+            raise HTTPException(status_code=404, detail="Video file not found")
+
+        try:
+            mcp_client()
