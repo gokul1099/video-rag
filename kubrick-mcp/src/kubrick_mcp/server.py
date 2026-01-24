@@ -1,10 +1,29 @@
 import click
 from fastmcp import FastMCP
+from .tools import process_video
+from .resources import list_tables, table_info
+from .prompts import routing_system_prompt, tool_use_system_prompt,general_system_prompt
 
 
 
+def add_mcp_tool(mcp:FastMCP):
+    mcp.tool()(process_video)
+
+def add_mcp_resource(mcp:FastMCP):
+    mcp.resource("video://tables/list")(list_tables)
+    mcp.resource("video://tables/{table_name}")(table_info)
+    
+
+def add_mcp_prompts(mcp:FastMCP):
+    mcp.prompt()(tool_use_system_prompt)
+    mcp.prompt()(general_system_prompt)
+    mcp.prompt()(routing_system_prompt)
 
 mcp =FastMCP("VideoProcessor")
+add_mcp_prompts(mcp)
+add_mcp_resource(mcp)
+add_mcp_tool(mcp)
+
 
 @click.command()
 @click.option("--port", default=9090, help="FastMCP server port")

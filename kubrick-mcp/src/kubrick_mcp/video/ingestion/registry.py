@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Dict
 
 from loguru import logger
-import kubrick_mcp.video.ingestion.contants as cc
-from kubrick_mcp.video.ingestion.models import CachedTable, CachedTableMetadata
+from . import contants as cc
+from .models import CachedTable, CachedTableMetadata
 
 logger = logger.bind(name="TableRegistry")
 
@@ -21,6 +21,7 @@ def get_registry() -> Dict[str, CachedTableMetadata]:
     """
 
     global VIDEO_INDEXES_REGISTRY
+    logger.info(f"viode_index_resitry {VIDEO_INDEXES_REGISTRY}")
     if not VIDEO_INDEXES_REGISTRY:
         try:
             registry_files= [
@@ -28,6 +29,7 @@ def get_registry() -> Dict[str, CachedTableMetadata]:
                 for f in os.listdir(cc.DEFAULT_CACHED_TABLES_REGISTRY_DIR)
                 if f.startswith("registry_") and f.endswith(".json")
             ]
+            logger.info(f"registry file {registry_files}")
             if registry_files:
                 latest_file = max(registry_files)
                 latest_registry = Path(cc.DEFAULT_CACHED_TABLES_REGISTRY_DIR) / latest_file

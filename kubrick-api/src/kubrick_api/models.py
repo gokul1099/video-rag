@@ -11,3 +11,7 @@ class UploadVideoResponse(BaseModel):
 class ProcessVideoRequest(BaseModel):
     video_path: str
 
+
+class ProcessVideoResponse(BaseModel):
+    message: str
+    task_id: str

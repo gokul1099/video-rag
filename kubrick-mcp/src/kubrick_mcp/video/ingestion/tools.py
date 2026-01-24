@@ -7,6 +7,7 @@ import av
 import loguru
 from moviepy import VideoFileClip
 from PIL import Image
+import os
 
 logger = loguru.logger.bind(name="VideoTools")
 
@@ -79,16 +80,36 @@ def decode_image(base64_string: str) -> Image.Image:
     except (ValueError, IOError) as e:
         raise IOError(f"Failed to decode image {str(e)}")
 
-def re_encode_video(video_path: str) -> str:
+def re_encode_video(video_path: str) -> str | bool:
     """
     re-encode a video file to ensure compatibility with PyAV.
     Note: Incase a video was downloaded from the web, it may not be compatible with PyAV.
     This function attempt to re-encode the video using FFmpeg and return the path to the re-encoded video
     """
-
-    if not Path(video_path).exists():
-        logger.error(f"Error: Video file not found at {video_path}")
+    logger.info(f"Input video path: {video_path}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Script location: {Path(__file__).parent}")
+    
+    # Try to resolve the path
+    video_path_obj = Path(video_path)
+    
+    # If relative, make it absolute from current working directory
+    if not video_path_obj.is_absolute():
+        video_path_obj = Path.cwd() / video_path
+    
+    video_path = str(video_path_obj.resolve())
+    
+    logger.info(f"Resolved video path: {video_path}")
+    logger.info(f"File exists: {Path(video_path).exists()}")
+    
+    if Path(video_path).exists():
+        logger.info(f"✓ Found video at: {video_path}")
+    else:
+        logger.error(f"✗ Video file not found at: {video_path}")
+        logger.error(f"Files in current directory: {list(Path.cwd().iterdir())}")
         return False
+    
+
     try:
         with av.open(video_path) as _:
             logger.info(f"Video {video_path} successfully opened by PyAV")
@@ -100,7 +121,7 @@ def re_encode_video(video_path: str) -> str:
         reencoded_file_name = f're_{o_fname}'
         reencoded_video_path = Path(o_dir) / reencoded_file_name
         command = ["ffmpeg", "-i", video_path, "-c", "copy", str(reencoded_video_path)]
-        logger.info(f"Attempting to re-encode video using FFmpeg: {' '.joint(command)}")
+        logger.info(f"Attempting to re-encode video using FFmpeg: {' '.join(command)}")
         try:
             result = subprocess.run(command, capture_output=True, text=True, check=True)
             logger.info(f"FFmpeg re-encoding successful for {video_path} to {reencoded_file_name}")

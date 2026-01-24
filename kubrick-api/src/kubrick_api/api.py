@@ -8,9 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastmcp.client import Client
 from loguru import logger
-from kubrick_api.models import UploadVideoResponse, ProcessVideoRequest
+from .models import UploadVideoResponse, ProcessVideoRequest, ProcessVideoResponse
 import shutil
+from .config import get_settings
 
+settings = get_settings()
 class TaskStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
@@ -22,7 +24,7 @@ class TaskStatus(str, Enum):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.agent = ""
-    app.state.bg_task_status = {}
+    app.state.bg_task_states = {}
     yield
     app.state.agent.reset_memory()
 
@@ -38,7 +40,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials = True,
-    allow_method=["*"],
+    allow_methods=["*"],
     allow_headers=["*"]
 )
 
@@ -59,7 +61,7 @@ async def upload_video(file: UploadFile= File(...)):
         raise HTTPException(status_code=400, details="No file uploaded")
     
     try:
-        shared_media = Path(shared_media / file.filename)
+        shared_media = Path("shared_media")
         shared_media.mkdir(exist_ok=True)
 
         video_path = Path(shared_media / file.filename)
@@ -85,10 +87,30 @@ async def process_video(request: ProcessVideoRequest, bg_tasks: BackgroundTasks,
         """
         Background task to process the video
         """
-        bg_task_state[task_id] = TaskStatus.IN_PROGRESS
+        bg_task_states[task_id] = TaskStatus.IN_PROGRESS
         if not Path(video_path).exists():
             bg_task_states[task_id] = TaskStatus.FAILED
             raise HTTPException(status_code=404, detail="Video file not found")
 
         try:
-            mcp_client()
+            mcp_client = Client(settings.MCP_SERVER)
+            async with mcp_client:
+                _ = await mcp_client.call_tool("process_video", {"video_path": request.video_path})
+        except Exception as e:
+            logger.error(f"Error processing video {video_path}: {e}")
+            bg_task_states[task_id] = TaskStatus.FAILED
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    bg_tasks.add_task(background_process_video, request.video_path, task_id)
+    return ProcessVideoResponse(message="Task enqued for processing", task_id=task_id)
+
+@click.command()
+@click.option("--port", default=8080, help="FastAPI server port")
+@click.option("--host", default="0.0.0.0", help="FastAPI server host")
+def run_api(port, host):
+    import uvicorn
+
+    uvicorn.run("api:app", host=host, port=port, loop="asyncio")
+
+if __name__ == "__main__":
+    run_api()

@@ -1,0 +1,15 @@
+anthropic>=0.76.0
+click>=8.3.1
+fastmcp>=2.14.3
+ipykernel>=7.1.0
+loguru>=0.7.3
+moviepy>=2.2.1
+openai>=2.15.0
+opik>=1.9.87
+pixeltable>=0.5.12
+pydantic>=2.12.5
+pydantic-settings>=2.12.0
+python-dotenv>=1.2.1
+ruff>=0.14.13
+sentence-transformers>=5.2.0
+transformers>=4.57.6

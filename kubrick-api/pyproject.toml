@@ -24,4 +24,4 @@ dependencies = [
 packages = ["src/kubrick_api"]
 
 [tool.ruff]
-target-version = "py13"
+target-version = "py313"

@@ -45,20 +45,20 @@ services:
     volumes:
       - shared_media:/app/shared_media
       - ./.vscode:/app/.vscode
-  kubrick-ui:
-    container_name: kubrick-ui
-    build:
-      context: ./kubrick-ui
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      - kubrick-api
-      - kubrick-mcp
-    networks:
-      - agent-network
-    volumes:
-      - shared_media:/app/shared_media
+  # kubrick-ui:
+  #   container_name: kubrick-ui
+  #   build:
+  #     context: ./kubrick-ui
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - kubrick-api
+  #     - kubrick-mcp
+  #   networks:
+  #     - agent-network
+  #   volumes:
+  #     - shared_media:/app/shared_media
 
 networks:
   agent-network:
