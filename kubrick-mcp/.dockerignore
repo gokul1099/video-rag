@@ -1,0 +1,5 @@
+.venv
+.records
+__pycache__
+.git
+.pixeltable/

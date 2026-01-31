@@ -28,3 +28,6 @@ packages = ["src/kubrick_mcp"]
 
 [tool.ruff]
 target-version = "py313"
+
+[tool.pixeltable]
+home = ".pixeltable"

@@ -16,9 +16,9 @@ class CachedTableMetadata(BaseModel):
 
 class CachedTable:
     video_cache: str = Field(..., description="Path to the video cache")
-    video_table: str = Field(..., description="Root video table")
-    frames_view: str = Field(..., description="Video frame which were split using a FPS and frame iterator")
-    audio_chunks_view: str= Field(..., description="After chunking audio, getting transcript and splitting it into sentences")
+    video_table: pxt.Table = Field(..., description="Root video table")
+    frames_view: pxt.Table = Field(..., description="Video frame which were split using a FPS and frame iterator")
+    audio_chunks_view: pxt.Table= Field(..., description="After chunking audio, getting transcript and splitting it into sentences")
 
     def __init__(self,video_name: str, 
                  video_cache: str, 
@@ -37,14 +37,14 @@ class CachedTable:
         return cls(
             video_name = metadata.video_name,
             video_cache = metadata.video_cache,
-            video_table = metadata.video_table,
-            frames_view = metadata.frames_view,
-            audio_chunk = metadata.audio_chunks_view
+            video_table = pxt.get_table(metadata.video_table),
+            frames_view = pxt.get_table(metadata.frames_view),
+            audio_chunk = pxt.get_table(metadata.audio_chunks_view)
         )
     
     def __str__(self):
         return {
-            "video_cache" : str(self.video_cache),
+            "video_cache" : self.video_cache,
             "video_table" : str(self.video_table),
             "frames_view" : str(self.frames_view),
             "audio_chunks_view": str(self.audio_chunks_view)
@@ -70,7 +70,7 @@ class Base64Image(BaseModel):
             return base64.b64encode(buffered.getvalue()).decode('utf-8')
         return v
     def to_pil(self) -> Image.Image:
-        return Image.open(io.BytesIO(base64.b64encode(self.image)))
+        return Image.open(io.BytesIO(base64.b64decode(self.image)))
     
 class TextContent(BaseModel):
     type: Literal["text"] = "text"

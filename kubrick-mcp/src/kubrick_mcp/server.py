@@ -1,8 +1,8 @@
 import click
 from fastmcp import FastMCP
-from .tools import process_video
-from .resources import list_tables, table_info
-from .prompts import routing_system_prompt, tool_use_system_prompt,general_system_prompt
+from kubrick_mcp.tools import process_video
+from kubrick_mcp.resources import list_tables, table_info
+from kubrick_mcp.prompts import routing_system_prompt, tool_use_system_prompt,general_system_prompt
 
 
 

@@ -14,7 +14,7 @@ logger = logger.bind(name="TableRegistry")
 VIDEO_INDEXES_REGISTRY: Dict[str, CachedTableMetadata] = {}
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def get_registry() -> Dict[str, CachedTableMetadata]:
     """
     Get the global video index registry
@@ -34,7 +34,7 @@ def get_registry() -> Dict[str, CachedTableMetadata]:
                 latest_file = max(registry_files)
                 latest_registry = Path(cc.DEFAULT_CACHED_TABLES_REGISTRY_DIR) / latest_file
                 with open(str(latest_registry), 'r') as f:
-                    VIDEO_INDEXES_REGISTRY = json.load(f)
+                    VIDEO_INDEXES_REGISTRY = json.loads(f)
                     for key, value in VIDEO_INDEXES_REGISTRY.items():
                         if isinstance(value, str):
                             value = json.load(value)
@@ -83,7 +83,7 @@ def get_table(video_name:str)-> Dict[str, CachedTable]:
     registry =get_registry()
     metadata = registry.get(video_name)
     if isinstance(metadata, str):
-        metadata=json.load(metadata)
+        metadata=json.loads(metadata)
     logger.info(f"Metadata: {metadata}")
     return CachedTable.from_metadata(metadata)
 

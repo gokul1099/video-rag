@@ -2,9 +2,9 @@ from typing import Dict
 from uuid import uuid4
 from loguru import logger
 
-from .config import get_settings
-from .video.ingestion.tools import extract_video_clip
-from .video.ingestion.video_processor import VideoProcessor
+from kubrick_mcp.config import get_settings
+from kubrick_mcp.video.ingestion.tools import extract_video_clip
+from kubrick_mcp.video.ingestion.video_processor import VideoProcessor
 
 logger = logger.bind(name="MCPVideoTools")
 video_processor = VideoProcessor()
