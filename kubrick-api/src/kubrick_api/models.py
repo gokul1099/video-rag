@@ -16,6 +16,11 @@ class ProcessVideoResponse(BaseModel):
     message: str
     task_id: str
 
+class UserMessageRequest(BaseModel):
+    message: str
+    video_path: str | None = None
+    image_base64: str | None = None
+
 class AssitantMessageResponse(BaseModel):
     message: str
     clip_path: str | None =None
@@ -39,3 +44,4 @@ class VideoClipResponseModel(BaseModel):
         description="A fun and engaging message to the user, asking them to watch the video clip, that need to follow kubrick's style and personality"
     )
     clip_path: str = Field(description="The path to the generated clip")
+

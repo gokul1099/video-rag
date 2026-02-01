@@ -47,6 +47,6 @@ class GroqTool(BaseModel):
         return cls(function=function)
     
 
-    def transform_tool_definition(tool) -> dict:
-        """Transform an MCP tool into a Groq tool definition dictionary"""
-        return GroqTool.from_mcp_tool(tool).model_dump()
+def transform_tool_definition(tool) -> dict:
+    """Transform an MCP tool into a Groq tool definition dictionary"""
+    return GroqTool.from_mcp_tool(tool).model_dump()

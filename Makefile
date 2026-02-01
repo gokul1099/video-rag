@@ -12,3 +12,13 @@ start-kubric:
 
 stop-kubric: 
 	docker compose stop
+
+
+build-kubrick-dev:
+	docker compose -f docker-compose.dev.yml build
+
+start-kubrick-dev:
+	docker compose -f docker-compose.dev.yml up --build -d
+
+stop-kubrick-dev: 
+	docker compose -f docker-compose.dev.yml stop

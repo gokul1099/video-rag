@@ -86,58 +86,67 @@ def re_encode_video(video_path: str) -> str | bool:
     Note: Incase a video was downloaded from the web, it may not be compatible with PyAV.
     This function attempt to re-encode the video using FFmpeg and return the path to the re-encoded video
     """
-    logger.info(f"Input video path: {video_path}")
-    logger.info(f"Current working directory: {os.getcwd()}")
-    logger.info(f"Script location: {Path(__file__).parent}")
-    
-    # Try to resolve the path
-    video_path_obj = Path(video_path)
-    
-    # If relative, make it absolute from current working directory
-    if not video_path_obj.is_absolute():
-        video_path_obj = Path.cwd() / video_path
-    
-    video_path = str(video_path_obj.resolve())
-    
-    logger.info(f"Resolved video path: {video_path}")
-    logger.info(f"File exists: {Path(video_path).exists()}")
-    
-    if Path(video_path).exists():
-        logger.info(f"✓ Found video at: {video_path}")
-    else:
-        logger.error(f"✗ Video file not found at: {video_path}")
-        logger.error(f"Files in current directory: {list(Path.cwd().iterdir())}")
+    if not Path(video_path).exists():
+        logger.error(f"Error: Video file not found at {video_path}")
         return False
-    
 
     try:
         with av.open(video_path) as _:
             logger.info(f"Video {video_path} successfully opened by PyAV")
             return str(video_path)
     except Exception as e:
-        logger.error(f"An unexpected error occurred while trying to open video {video_path}: {e}")
-    finally:
-        o_dir,o_fname = Path(video_path).parent, Path(video_path).name
-        reencoded_file_name = f're_{o_fname}'
+        logger.warning(f"PyAV couldn't open video {video_path}: {e}. Attempting re-encode...")
+        
+        # Re-encode the video
+        o_dir, o_fname = Path(video_path).parent, Path(video_path).stem
+        o_ext = Path(video_path).suffix
+        reencoded_file_name = f're_{o_fname}{o_ext}'
         reencoded_video_path = Path(o_dir) / reencoded_file_name
-        command = ["ffmpeg", "-i", video_path, "-c", "copy", str(reencoded_video_path)]
+        
+        # Re-encode to H.264 + AAC for maximum compatibility
+        command = [
+            "ffmpeg",
+            "-i", str(video_path),
+            "-c:v", "libx264",           # Re-encode video to H.264
+            "-preset", "fast",           # Encoding speed preset
+            "-crf", "23",                # Quality (lower = better, 18-28 is good range)
+            "-c:a", "aac",               # Re-encode audio to AAC
+            "-b:a", "128k",              # Audio bitrate
+            "-movflags", "+faststart",   # Enable streaming
+            "-y",                        # Overwrite output file if exists
+            str(reencoded_video_path)
+        ]
+        
         logger.info(f"Attempting to re-encode video using FFmpeg: {' '.join(command)}")
+        
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                command, 
+                capture_output=True, 
+                text=True, 
+                check=True,
+                timeout=300  # 5 minute timeout for long videos
+            )
             logger.info(f"FFmpeg re-encoding successful for {video_path} to {reencoded_file_name}")
-            logger.debug(f"FFmpeg stdout: {result.stdout}")
             logger.debug(f"FFmpeg stderr: {result.stderr}")
 
             try:
-                with av.open(reencoded_video_path):
-                    logger.info(f"Re-encoded video {reencoded_video_path} successfully opened by PyAv")
+                with av.open(str(reencoded_video_path)):
+                    logger.info(f"Re-encoded video {reencoded_video_path} successfully opened by PyAV")
                     return str(reencoded_video_path)
             except Exception as e:
                 logger.error(
-                    f"An unexpected error occured while trying to open re-encoded video {reencoded_video_path}: {e}"
+                    f"Re-encoded video {reencoded_video_path} still can't be opened by PyAV: {e}"
                 )
                 return None
+                
+        except subprocess.CalledProcessError as e:
+            logger.error(f"FFmpeg re-encoding failed with exit code {e.returncode}")
+            logger.error(f"FFmpeg stderr: {e.stderr}")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.error(f"FFmpeg re-encoding timed out after 5 minutes")
+            return None
         except Exception as e:
             logger.error(f"An unexpected error occurred during FFmpeg re-encoding: {e}")
-        return None
-
+            return None

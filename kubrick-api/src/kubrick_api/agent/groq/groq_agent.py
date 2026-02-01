@@ -74,7 +74,7 @@ class GroqAgent(BaseAgent):
         response = self.instructor_client.chat.completions.create(
             model=settings.GROQ_ROUTING_MODEL,
             response_model=RoutingResponseModel,
-            messagees= messages,
+            messages= messages,
             max_completion_tokens = 20
         )
 
@@ -176,13 +176,14 @@ class GroqAgent(BaseAgent):
         
 
     @opik.track(name="generate-response", type="llm")
-    def _response_general(self, message: str) -> str:
+    def _response_general(self, message: str) -> GeneralResponseModel:
         chat_history = self._build_chat_history(self.general_system_prompt, message)
-        return self.instructor_client.chat.completion.create(
+        response = self.instructor_client.chat.completions.create(
             model=settings.GROQ_GENERAL_MODEL,
-            message=chat_history,
+            messages=chat_history,
             response_model=GeneralResponseModel
         )
+        return response
     def _add_to_memory(self,role: str, content: str) -> None:
         """Add a message to the agent's memory"""
         self.memory.insert(

@@ -17,11 +17,14 @@ RUN apt-get update && \
     update-ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV HF_HUB_DISABLE_TELEMETRY=1
-ENV HF_HUB_ENABLE_HF_TRANSFER=0
+
 # 4. Create user first
 RUN groupadd -r pixeltable && useradd -r -g pixeltable -m -d /home/pixeltable pixeltable
+
+RUN mkdir -p /root/.cache/huggingface /home/pixeltable/.cache/huggingface && \
+    chmod -R 777 /root/.cache/huggingface && \
+    chown -R pixeltable:pixeltable /home/pixeltable/.cache
+
 
 WORKDIR /app
 

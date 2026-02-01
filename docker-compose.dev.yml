@@ -7,16 +7,15 @@ services:
       - "9090:9090"
     env_file:
       - ./kubrick-mcp/.env
-    command: sleep infinity
+    # command: sleep infinity
     networks:
       - agent-network
     environment:
-      - HF_HOME=/root/.cache/huggingface
+      - HF_HOME=/home/pixeltable/.cache/huggingface
     volumes:
       - ./.vscode:/app/.vscode
       - shared_media:/app/shared_media
-      - ~/.cache:/root/.cache
-      - ~/.cache/huggingface:/root/.cache/huggingface
+      - hf_cache:/home/pixeltable/.cache/huggingface
 
     deploy:
       resources:
@@ -31,7 +30,7 @@ services:
     container_name: kubrick-api
     build:
       context: ./kubrick-api
-    command: sleep infinity
+    # command: sleep infinity
     ports:
       - "8080:8080"
     environment:
@@ -66,3 +65,4 @@ networks:
 
 volumes:
   shared_media:
+  hf_cache: 

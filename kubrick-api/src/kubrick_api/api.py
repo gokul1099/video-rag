@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastmcp.client import Client
 from loguru import logger
-from .models import UploadVideoResponse, ProcessVideoRequest, ProcessVideoResponse
+from  kubrick_api.models import UploadVideoResponse, ProcessVideoRequest, ProcessVideoResponse, AssitantMessageResponse, UserMessageRequest
 import shutil
-from .config import get_settings
+from kubrick_api.config import get_settings
+from kubrick_api.agent import GroqAgent
 
 settings = get_settings()
 class TaskStatus(str, Enum):
@@ -23,7 +24,12 @@ class TaskStatus(str, Enum):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.agent = ""
+    app.state.agent = GroqAgent(
+        name="kubrick",
+        mcp_server=settings.MCP_SERVER,
+        disable_tools=["process_video"],
+    )
+
     app.state.bg_task_states = {}
     yield
     app.state.agent.reset_memory()
@@ -103,6 +109,43 @@ async def process_video(request: ProcessVideoRequest, bg_tasks: BackgroundTasks,
     
     bg_tasks.add_task(background_process_video, request.video_path, task_id)
     return ProcessVideoResponse(message="Task enqued for processing", task_id=task_id)
+
+@app.get("/task-status/{task_id}")
+async def get_task_status(task_id: str, fastapi_request: Request):
+    status = fastapi_request.app.state.bg_task_states.get(task_id, TaskStatus.NOT_FOUND)
+    return {"task_id": task_id, "status": status}
+
+@app.post("/chat", response_model=AssitantMessageResponse)
+async def chat(request: UserMessageRequest, fastapi_request: Request):
+    """
+    CHat with the AI assistant
+    """
+    agent = fastapi_request.app.state.agent
+    await agent.setup()
+
+    try:
+        response = await agent.chat(request.message, request.video_path, request.image_base64)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/media/{file_path:path}")
+async def serve_media(file_path: str):
+    """
+    serve media files from the shared_media directory
+    """
+    try:
+        clean_path = Path(file_path).name
+        media_file = Path("shared_media") / clean_path
+
+        if not media_file.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        return FileResponse(str(media_file))
+    except Exception as e:
+        logger.error(f"Error serving media file {file_path}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @click.command()
 @click.option("--port", default=8080, help="FastAPI server port")

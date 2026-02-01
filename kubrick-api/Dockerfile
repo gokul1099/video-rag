@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+ENV PYTHONPATH=/app/src
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt-get update && \
