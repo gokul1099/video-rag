@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState, useRef } from "react";
-import { useUploads } from "./upload_context";
+import { useUploads } from "../context/upload_context";
 
 type MediaMap = Record<string, { url?: string; loading: boolean; error?: string }>
 

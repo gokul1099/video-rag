@@ -122,7 +122,7 @@ async def chat(request: UserMessageRequest, fastapi_request: Request):
     """
     agent = fastapi_request.app.state.agent
     await agent.setup()
-
+    logger.info(f"{request.video_path}")
     try:
         response = await agent.chat(request.message, request.video_path, request.image_base64)
         return response

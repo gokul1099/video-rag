@@ -118,7 +118,7 @@ class GroqAgent(BaseAgent):
             .choices[0]
             .message
         )
-
+        logger.info(f"{self.tools}")
         tool_calls = response.tool_calls
         logger.info(f"Tool calls: {tool_calls}")
 
@@ -209,7 +209,7 @@ class GroqAgent(BaseAgent):
     ) -> AssitantMessageResponse:
         """Main entry point for processing a user message"""
         opik_context.update_current_trace(thread_id=self.thread_id)
-
+        
         tool_required = video_path and self._should_use_tool(message)
         logger.info(f"Tool required: {tool_required}")
 

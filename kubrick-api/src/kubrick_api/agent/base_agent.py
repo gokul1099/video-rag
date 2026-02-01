@@ -30,9 +30,10 @@ class BaseAgent(ABC):
         """Initialize async components of the agent"""
         async with self.mcp_client as _:
             self.tools = await self._get_tools()
-            self.routing_system_prompt = self._get_routing_system_prompt()
-            self.tool_use_system_prompt = self._get_tool_use_system_prompt()
-            self.general_system_prompt = self._get_general_system_prompt()
+            logger.info(f"Found tools: {self.tools} ")
+            self.routing_system_prompt =await self._get_routing_system_prompt()
+            self.tool_use_system_prompt =await self._get_tool_use_system_prompt()
+            self.general_system_prompt =await self._get_general_system_prompt()
 
     async def _get_routing_system_prompt(self) -> str:
         """Get the routing sysmte prompt"""
