@@ -19,7 +19,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # 4. Create user first
-RUN groupadd -r pixeltable && useradd -r -g pixeltable -m -d /home/pixeltable pixeltable
+RUN groupadd -g 1000 pixeltable && useradd -u 1000 -r -g pixeltable -m -d /home/pixeltable pixeltable
 
 RUN mkdir -p /root/.cache/huggingface /home/pixeltable/.cache/huggingface && \
     chmod -R 777 /root/.cache/huggingface && \

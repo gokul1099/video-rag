@@ -39,7 +39,7 @@ class CachedTable:
             video_cache = metadata.video_cache,
             video_table = pxt.get_table(metadata.video_table),
             frames_view = pxt.get_table(metadata.frames_view),
-            audio_chunk = pxt.get_table(metadata.audio_chunks_view)
+            audio_chunks_view = pxt.get_table(metadata.audio_chunks_view)
         )
     
     def __str__(self):

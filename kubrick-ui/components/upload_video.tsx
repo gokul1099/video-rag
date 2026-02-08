@@ -58,7 +58,9 @@ const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void 
         throw new Error(`Upload failed: ${response.status} ${text}`);
       }
       const data: UploadResponse = await response.json();
-
+      
+      const process_video_res = await fetch('http://localhost:8080/process-video', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({video_path: data.video_path})})
+      console.log(process_video_res,"process_video_api")
       // call the provided callback with the structured response
       onUploadSuccess(data);
     } catch (error) {

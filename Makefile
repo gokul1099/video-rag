@@ -22,3 +22,12 @@ start-kubrick-dev:
 
 stop-kubrick-dev: 
 	docker compose -f docker-compose.dev.yml stop
+
+logs:
+	tmux new-session -d -s kubrick-logs && \
+	tmux split-window -h && \
+	tmux select-pane -t 0 && \
+	tmux send-keys "docker compose logs -f kubrick-mcp" C-m && \
+	tmux select-pane -t 1 && \
+	tmux send-keys "docker compose logs -f kubrick-api" C-m && \
+	tmux attach-session -t kubrick-logs

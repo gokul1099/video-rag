@@ -14,6 +14,11 @@ logger = loguru.logger.bind(name="VideoTools")
 def extract_video_clip(video_path:str, start_time: float, end_time: float, output_path: str = None) -> VideoFileClip:
     if start_time >= end_time:
         return ValueError("start_time must be less than end_time")
+    if not Path(video_path).exists():
+        logger.error(f"Input video file not found: {video_path} (Absolute: {Path(video_path).resolve()})")
+        raise FileNotFoundError(f"Input video file not found: {video_path}")
+
+    logger.info(f"Extracting video clip from {video_path} ({start_time}-{end_time}) to {output_path}")
     
     ## Anatomy of FFMPEG command
     # -i = input file
@@ -21,6 +26,7 @@ def extract_video_clip(video_path:str, start_time: float, end_time: float, outpu
     # -c (:v, :a) = sets the codec for the audio, and video channels
     # -preset = encoding speed/quality split
     # last argument is the output video path (if using libx264, it must end with .mp4)
+
     command = [
         "ffmpeg",
         "-ss",
@@ -28,7 +34,7 @@ def extract_video_clip(video_path:str, start_time: float, end_time: float, outpu
         "-to",
         str(end_time),
         "-i",
-        video_path,
+        str(video_path),
         "-c:v",
         "libx264",
         "-preset",
@@ -38,15 +44,27 @@ def extract_video_clip(video_path:str, start_time: float, end_time: float, outpu
         "-c:a",
         "copy",
         "-y",
-        output_path
+        str(output_path)
     ]
     try:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, _ =process.communicate()
-        logger.debug(f"FFmpeg output: {stdout.decode('utf-8', errors="ignore")}")
-        return VideoFileClip(output_path)
-    except subprocess.CalledProcessError as e:
-        raise IOError(f"Failed to extract video clip: {str(e)}")
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode('utf-8', errors="ignore")
+            logger.error(f"FFmpeg failed with return code {process.returncode}")
+            logger.error(f"FFmpeg stderr: {error_msg}")
+            raise IOError(f"FFmpeg failed: {error_msg}")
+
+        logger.debug(f"FFmpeg output: {stdout.decode('utf-8', errors='ignore')}")
+        
+        if not Path(output_path).exists():
+             raise FileNotFoundError(f"FFmpeg completed but output file not found at {output_path}")
+
+        return VideoFileClip(str(output_path))
+    except Exception as e:
+        logger.error(f"Failed to extract video clip: {str(e)}")
+        raise
     
 
 def encode_image(image:str | Image.Image) -> str:

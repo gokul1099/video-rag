@@ -1,6 +1,6 @@
 from typing import Any,Dict, Optional
 from pydantic import BaseModel
-
+from loguru import logger
 
 class GroqParameter(BaseModel):
     """Represents a parameter in a Groq tool definition"""
@@ -18,7 +18,7 @@ class GroqFunction(BaseModel):
     """Represents a function in a Groq tool definition"""
     name: str
     description: str
-    parameter: GroqParameter
+    parameters: GroqParameters
 
 class GroqTool(BaseModel):
     """Represents a Groq tool definition"""
@@ -30,18 +30,19 @@ class GroqTool(BaseModel):
         """Create a GroqTool instance from an MCP tool"""
         properties = {}
         for field_name, field_info in tool.inputSchema["properties"].items():
+            logger.info(f"Logging form_mcp_tool ====== {field_name}, {field_info}")
             properties[field_name] = GroqParameter(
                 type=field_info["type"],
-                description=field_info["title"],
+                description=field_info["description"],
                 default=field_info.get("default")
             )
 
         parameters = GroqParameters(
-            properties=properties, required=tool.inputSchema.get("required")
+            properties=properties, required=tool.inputSchema.get("required") or []
         )
 
         function = GroqFunction(
-            name=tool.name, description=tool.description, parameter=parameters
+            name=tool.name, description=tool.description, parameters=parameters
         )
 
         return cls(function=function)

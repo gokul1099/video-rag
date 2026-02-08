@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # --- OPENAI Configuration ---
     OPENAI_API_KEY: str
-    AUDIO_TRANSCRIPT_MODEL: str = "gpt-4o-mini-transcribe"  # Whisper tiny model 37M
+    AUDIO_TRANSCRIPT_MODEL: str = "whisper-1"
     IMAGE_CAPTION_MODEL: str = "gpt-4o-mini"
 
     # --- Video Ingestion Configuration ---

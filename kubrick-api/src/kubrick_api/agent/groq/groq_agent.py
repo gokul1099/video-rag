@@ -37,6 +37,7 @@ class GroqAgent(BaseAgent):
     
     async def _get_tools(self) -> List[Dict[str, Any]]:
         tools = await self.discover_tools()
+        logger.info(f"{tools}")
         return [transform_tool_definition(tool) for tool in tools]
     
     @opik.track(name="build-chat-hitory")
@@ -87,7 +88,8 @@ class GroqAgent(BaseAgent):
         return video_clip_response
     
     async def _execute_tool_call(self, tool_call:Any, video_path: str, image_base64: str | None = None) -> str:
-        function_name = tool_call.function_name
+        logger.info(f"{tool_call}")
+        function_name = tool_call.function.name
         function_args = json.loads(tool_call.function.arguments)
         function_args["video_path"] = video_path
         if function_name =="get_vidoe_clip_from_image":
@@ -101,12 +103,15 @@ class GroqAgent(BaseAgent):
             logger.error(f"Error executing tool {function_name}: {str(e)}")
             return f"Error executing tool {function_name}: {str(e)}"
     @opik.track(name="tool_use",type="tool")
+
     async def _run_with_tool(self, message:str , video_path:str ,image_base64: str | None = None) -> str:
         """Execute chat completion with tool usage"""
         tool_use_system_prompt = self.tool_use_system_prompt.format(
             is_image_provided=bool(image_base64)
         )
         chat_history = self._build_chat_history(tool_use_system_prompt, message)
+        logger.info(f"Logging self tools{self.tools}")
+
         response = (
             self.client.chat.completions.create(
                 model=settings.GROQ_TOOL_USE_MODEL,
@@ -118,7 +123,6 @@ class GroqAgent(BaseAgent):
             .choices[0]
             .message
         )
-        logger.info(f"{self.tools}")
         tool_calls = response.tool_calls
         logger.info(f"Tool calls: {tool_calls}")
 
@@ -127,6 +131,7 @@ class GroqAgent(BaseAgent):
             return GeneralResponseModel(message=response.content)
         
         for tool_call in tool_calls:
+            logger.info(f"Calling execute tool call {tool_call}")
             function_response = await self._execute_tool_call(tool_call, video_path, image_base64)
             logger.info(f"Function response: {function_response}")
 
@@ -214,7 +219,6 @@ class GroqAgent(BaseAgent):
         logger.info(f"Tool required: {tool_required}")
 
         if tool_required:
-            logger.info("Running tool response")
             response = await self._run_with_tool(message, video_path, image_base64)
         else:
             logger.info("Running general response")

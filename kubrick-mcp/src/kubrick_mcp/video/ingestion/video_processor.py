@@ -55,6 +55,7 @@ class VideoProcessor():
             self.audio_view_name = f"{self.video_table_name}_audio_chunks"
             self.video_table = None
             self._setup_table()
+            logger.info("adding index to registry")
             registry.add_index_to_registry(
                 video_name= self._video_mapping_idx,
                 video_cache= self.pxt_cache,
