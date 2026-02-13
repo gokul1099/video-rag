@@ -7,7 +7,7 @@ import React, { useState } from "react";
 
 function Main() {
   const { addUpload, uploads } = useUploads();
-  const { addMessage } = useMessages();
+  const { addMessage, messages } = useMessages();
   const [text, setText] = useState("");
 
   const send = async () => {
@@ -38,7 +38,12 @@ function Main() {
 
       const data = await res.json();
       const assistantText = data?.message ?? JSON.stringify(data);
-      addMessage({ role: "assistant", content: assistantText });
+      const clipPath = data?.clip_path;
+      addMessage({
+        role: "assistant",
+        content: assistantText,
+        ...(clipPath && { clip_path: clipPath })
+      });
     } catch (e: any) {
       addMessage({ role: "assistant", content: `Request failed: ${String(e)}` });
     }
@@ -46,10 +51,10 @@ function Main() {
   return (
     <>
       <button data-drawer-target="default-sidebar" data-drawer-toggle="default-sidebar" aria-controls="default-sidebar" type="button" className="text-heading bg-transparent box-border border border-transparent hover:bg-neutral-secondary-medium focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-base ms-3 mt-3 text-sm p-2 focus:outline-none inline-flex sm:hidden">
-         <span className="sr-only">Open sidebar</span>
-         <svg className="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-        <path stroke="currentColor" strokeLinecap="round" strokeWidth="2" d="M5 7h14M5 12h14M5 17h10"/>
-         </svg>
+        <span className="sr-only">Open sidebar</span>
+        <svg className="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" strokeLinecap="round" strokeWidth="2" d="M5 7h14M5 12h14M5 17h10" />
+        </svg>
       </button>
 
       <aside id="default-sidebar" className="fixed top-0 left-0 z-40 w-64 h-full transition-transform -translate-x-full sm:translate-x-0" aria-label="Sidebar">
@@ -62,8 +67,29 @@ function Main() {
       </aside>
 
       <div className="p-4 sm:ml-64">
-        <div className=""> 
-          {}
+        <div className="max-w-5xl mx-auto space-y-4">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[70%] rounded-lg px-4 py-2 ${msg.role === "user"
+                ? "bg-sky-600 text-white"
+                : "bg-neutral-secondary-medium text-white border border-default-medium"
+                }`}>
+                <p className="text-sm mb-1 opacity-70">{msg.role === "user" ? "You" : "Kubrick"}</p>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.clip_path && (
+                  <div className="mt-3 bg-red-400">
+                    <video
+                      controls
+                      className="w-full rounded-md"
+                      src={`http://localhost:8080/media/${msg.clip_path}`}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
         <div className="pb-28">{/* reserve space for fixed bottom bar */}</div>
       </div>

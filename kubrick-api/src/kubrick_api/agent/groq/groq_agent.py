@@ -167,8 +167,8 @@ class GroqAgent(BaseAgent):
 
                     logger.info(f"Tracing image from trimmed clip: {followup_response.clip_path}")
                     first_image_path = tools.sample_first_frame(followup_response.clip_path)
-                    opik_context.update_currect_trace(
-                        attachmets=[
+                    opik_context.update_current_trace(
+                        attachments=[
                             Attachment(
                                 data=first_image_path,
                                 content_type="image/png"

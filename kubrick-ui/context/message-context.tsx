@@ -7,6 +7,7 @@ export type Message = {
 	role: "user" | "assistant";
 	content: string;
 	timestamp: string;
+	clip_path?: string; // Optional video clip path from API response
 };
 
 type MessageContextType = {
