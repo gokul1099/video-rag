@@ -90,8 +90,21 @@ def encode_image(image:str | Image.Image) -> str:
 def decode_image(base64_string: str) -> Image.Image:
     """
     Decode a base64 image to PIL image object
+    Handles data URL prefixes and adds proper padding if needed
     """
     try:
+        # Strip data URL prefix if present (e.g., "data:image/jpeg;base64,")
+        if "," in base64_string and base64_string.startswith("data:"):
+            base64_string = base64_string.split(",", 1)[1]
+        
+        # Remove any whitespace
+        base64_string = base64_string.strip()
+        
+        # Add padding if needed (base64 strings should be multiples of 4)
+        padding_needed = len(base64_string) % 4
+        if padding_needed:
+            base64_string += "=" * (4 - padding_needed)
+        
         image_bytes = base64.b64decode(base64_string)
         image_buffer = BytesIO(image_bytes)
         return Image.open(image_buffer)

@@ -1,6 +1,6 @@
 import click
 from fastmcp import FastMCP
-from kubrick_mcp.tools import process_video, get_video_clip_from_user_query
+from kubrick_mcp.tools import process_video, get_video_clip_from_user_query, ask_question_about_video, get_video_clip_from_image
 from kubrick_mcp.resources import list_tables, table_info
 from kubrick_mcp.prompts import routing_system_prompt, tool_use_system_prompt,general_system_prompt
 
@@ -9,7 +9,9 @@ from kubrick_mcp.prompts import routing_system_prompt, tool_use_system_prompt,ge
 def add_mcp_tool(mcp:FastMCP):
     mcp.tool(title="process video")(process_video)
     mcp.tool(title="get video clip from user query")(get_video_clip_from_user_query)
-
+    mcp.tool(title="ask any questions about the video")(ask_question_about_video)
+    mcp.tool(title="get video clip from the user query image")(get_video_clip_from_image)
+    
 def add_mcp_resource(mcp:FastMCP):
     mcp.resource("video://tables/list")(list_tables)
     mcp.resource("video://tables/{table_name}")(table_info)

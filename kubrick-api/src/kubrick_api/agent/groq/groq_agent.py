@@ -95,7 +95,7 @@ class GroqAgent(BaseAgent):
         if function_name =="get_vidoe_clip_from_image":
             function_args["user_image"] = image_base64
         
-        logger.info(f"Executing tool: {function_name}")
+        logger.info(f"Executing tool: {function_name} with args {function_args}")
 
         try:
             return await self.call_tool(function_name, function_args)

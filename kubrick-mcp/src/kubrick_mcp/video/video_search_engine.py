@@ -13,12 +13,32 @@ class VideoSearchEngine:
 
     def __init__(self, video_name: str):
         """Initialize the video search engine"""
-
+        if not video_name:
+            raise ValueError(f"Video name is missing")
         self.video_index: CachedTable = registry.get_table(video_name)
         if not self.video_index:
             raise ValueError(f"Video index {video_name} not found in registry")
         self.video_name= video_name
     
+    def search_by_image(self, image_base64:str, top_k: int) -> List[Dict[str, Any]]:
+        """
+        Search video clips by image similarity
+        """
+        image =decode_image(image_base64)
+        sims = self.video_index.frames_view.resized_frame.similarity(image)
+        results = self.video_index.frames_view.select(
+            self.video_index.frames_view.pos_msec,
+            self.video_index.frames_view.resized_frame,
+            similarity=sims
+        ).order_by(sims, asc=False)
+
+        return [
+            {
+                'start_time': entry["pos_msec"]/1000.0 - settings.DELTA_SECONDS_FRAME_INTERVAL,
+                'end_time': entry['pos_msec'] / 1000.0 + settings.DELTA_SECONDS_FRAME_INTERVAL
+            }
+            for entry in results.limit(top_k).collect()
+        ]
     def search_by_speech(self, query: str, top_k: int) -> List[Dict[str, Any]]:
         """Search video clips by speech similarity"""
 

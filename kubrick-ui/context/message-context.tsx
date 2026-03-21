@@ -8,6 +8,7 @@ export type Message = {
 	content: string;
 	timestamp: string;
 	clip_path?: string; // Optional video clip path from API response
+	image_base64?: string; // Optional image base64 from user
 };
 
 type MessageContextType = {

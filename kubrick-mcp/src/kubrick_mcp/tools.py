@@ -31,7 +31,8 @@ def get_video_clip_from_user_query(
         video_path: Annotated[str, "The path to the video file"] = "", 
         user_query: Annotated[str, "he user query to search for"] = "") -> Annotated[str,"Path to the extracted video clip"]:
     
-    """Get a video clip based on similarity to a provided image.
+    """
+    Get a video clip based on similarity to a provided image.
 
     Returns:
         str: Path to the extracted video clip.
@@ -48,11 +49,6 @@ def get_video_clip_from_user_query(
 
     speech_sim = speech_clips[0]["similarity"] if speech_clips else -1
     caption_sim = caption_clips[0]["similarity"] if caption_clips else -1
-    
-    logger.info(f"speech clips : {speech_clips}")
-    logger.info(f"caption clips : {caption_clips}")
-    logger.info(f"speech sim {speech_sim}")
-    logger.info(f"caption sim {caption_sim}")
     
     if speech_sim > caption_sim:
         video_clip_info = speech_clips[0]
@@ -72,3 +68,45 @@ def get_video_clip_from_user_query(
 
     return video_clip.filename
 
+def get_video_clip_from_image(video_path: Annotated[str, "The path to the video file"], 
+                              user_image: Annotated[str, "The image user shared for querying"]) -> str:
+    """
+    Get a video clip based on similarity to a provided image
+
+    Args:
+        video_path (str): The path to the video file
+        user_image (str): The query image encoded in base64 format
+
+    Returns:
+        str: Path to the extracted video clip
+    """
+    logger.info(f"Video path while calling get video clip from image {video_path}")
+    search_engine = VideoSearchEngine(video_path)
+    image_clips = search_engine.search_by_image(user_image, settings.VIDEO_CLIP_IMAGE_SEARCH_TOP_K)
+    video_clip = extract_video_clip(
+        video_path=video_path,
+        start_time=image_clips[0]['start_time'],
+        end_time=image_clips[0]['end_time'],
+        output_path=f"./shared_media/{str(uuid4())}.mp4"
+    )
+    return video_clip.filename
+
+
+def ask_question_about_video(
+                video_path: Annotated[str, "The path to the video file"], 
+                user_query: Annotated[str, "The user query to search for"]) -> str:
+    """
+    Get relevant captions from the video based on the user's question
+
+    Args:
+        video_path (str): The path to the video file.
+        user_query (str): The question to search for relevant captions
+    
+    Returns:
+        str: Concatenated relevant captions from the video
+    """
+    logger.info(f"Video path")
+    search_engine = VideoSearchEngine(video_path)
+    caption_info = search_engine.get_caption_info(user_query, settings.QUESTION_ANSWER_TOP_K)
+    answer = "\n".join(entry["caption"] for entry in caption_info)
+    return answer

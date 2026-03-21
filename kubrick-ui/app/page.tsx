@@ -1,27 +1,23 @@
 "use client"
 import VideoUploader from "@/components/upload_video";
-import { UploadProvider, useUploads } from "@/components/upload_context";
+import { UploadProvider, useUploads } from "@/context/upload_context";
 import UploadList from "@/components/upload_list";
 import { MessageProvider, useMessages } from "@/context/message-context";
-import React, { useState } from "react";
+import MessageInput from "@/components/message_input";
+import MessageList from "@/components/message_list";
+import React from "react";
 
 function Main() {
   const { addUpload, uploads } = useUploads();
   const { addMessage, messages } = useMessages();
-  const [text, setText] = useState("");
 
-  const send = async () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
+  const handleSendMessage = async (message: string, image_base64: string | null) => {
     // add user message locally
-    addMessage({ role: "user", content: trimmed });
+    addMessage({ role: "user", content: message, ...(image_base64 && { image_base64 }) });
 
     // prepare request body
     const video_path = uploads && uploads.length > 0 ? uploads[0].video_path : null;
-    const body = { message: trimmed, video_path, image_base64: null };
-
-    setText("");
+    const body = { message, video_path, image_base64: image_base64 ? image_base64.split(",")[1] : null };
 
     try {
       const res = await fetch("http://localhost:8080/chat", {
@@ -67,52 +63,11 @@ function Main() {
       </aside>
 
       <div className="p-4 sm:ml-64">
-        <div className="max-w-5xl mx-auto space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[70%] rounded-lg px-4 py-2 ${msg.role === "user"
-                ? "bg-sky-600 text-white"
-                : "bg-neutral-secondary-medium text-white border border-default-medium"
-                }`}>
-                <p className="text-sm mb-1 opacity-70">{msg.role === "user" ? "You" : "Kubrick"}</p>
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-                {msg.clip_path && (
-                  <div className="mt-3 bg-red-400">
-                    <video
-                      controls
-                      className="w-full rounded-md"
-                      src={`http://localhost:8080/media/${msg.clip_path}`}
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <MessageList messages={messages} />
         <div className="pb-28">{/* reserve space for fixed bottom bar */}</div>
       </div>
 
-      {/* Fixed bottom input bar */}
-      <div className="fixed bottom-0 left-0 right-0 sm:left-64 bg-transparent border-t px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center gap-3">
-          <label htmlFor="visitors" className="sr-only">Message</label>
-          <input
-            type="text"
-            id="visitors"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); send(); } }}
-            className="bg-neutral-secondary-medium border text-white border-default-medium text-heading text-base rounded-base focus:ring-brand focus:border-brand flex-1 px-4 py-3.5 shadow-xs placeholder:text-body"
-            required
-          />
-          <button type="button" onClick={send} className="bg-sky-600 hover:bg-sky-700 text-white rounded-base px-4 py-2">
-            Send
-          </button>
-        </div>
-      </div>
+      <MessageInput onSend={handleSendMessage} />
     </>
   );
 }
