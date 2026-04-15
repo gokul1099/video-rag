@@ -15,7 +15,7 @@ export default function MessageList({ messages }: MessageListProps) {
             ? "bg-sky-600 text-white"
             : "bg-neutral-secondary-medium text-white border border-default-medium"
             }`}>
-            <p className="text-sm mb-1 opacity-70">{msg.role === "user" ? "You" : "Kubrick"}</p>
+            <p className="text-sm mb-1 opacity-70">{msg.role === "user" ? "You" : "Agent"}</p>
             <p className="whitespace-pre-wrap">{msg.content}</p>
             {msg.clip_path && (
               <div className="mt-3 bg-red-400">
