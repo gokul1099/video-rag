@@ -12,6 +12,12 @@ from  kubrick_api.models import UploadVideoResponse, ProcessVideoRequest, Proces
 import shutil
 from kubrick_api.config import get_settings
 from kubrick_api.agent import GroqAgent
+from kubrick_api.db.db import get_db_manager, get_db
+from kubrick_api.auth.service import AuthService
+from kubrick_api.auth.schema import (UserLogin, UserCreate, Token, UserResponse)
+from kubrick_api.db.models import User
+from fastapi import APIRouter, Depends, HTTPException, status
+from kubrick_api.routes import AuthRouter
 
 settings = get_settings()
 class TaskStatus(str, Enum):
@@ -29,10 +35,15 @@ async def lifespan(app: FastAPI):
         mcp_server=settings.MCP_SERVER,
         disable_tools=["process_video"],
     )
+    db=get_db_manager()
+    db.init_db()
+    logger.info("Database initialized")
 
     app.state.bg_task_states = {}
     yield
     app.state.agent.reset_memory()
+    db = get_db_manager()
+    db.shutdown()
 
 
 app = FastAPI(
@@ -42,6 +53,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.include_router(AuthRouter, prefix="/api/v1")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,6 +62,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
 
 @app.get("/")
 async def root():
@@ -145,7 +159,6 @@ async def serve_media(file_path: str):
     except Exception as e:
         logger.error(f"Error serving media file {file_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @click.command()
 @click.option("--port", default=8080, help="FastAPI server port")

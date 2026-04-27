@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from typing import Optional
 class Settings(BaseSettings):
     model_config= SettingsConfigDict(env_file=".env", extra="ignore", env_file_encoding="utf-8")
     GROQ_API_KEY: str
@@ -33,6 +33,26 @@ class Settings(BaseSettings):
     # --- Disable Nest Asyncio ---
     DISABLE_NEST_ASYNCIO: bool = True
 
+    #--- for jwt token ---
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS:int = 7
+    DATABASE_URL: str
+    DB_POOL_SIZE: int = 20
+    DB_POOL_PRE_PING: bool = True
+    ENVIRONMENT:str = "development"
+    DEBUG:bool = True
+    APP_TITLE: str = "video-rag-system"
+    API_VERSION: str = "v1"
+    ROOT_PATH: Optional[str] = None
+    CORS_ORIGIN: str = "http://localhost:3000,http://localhost:8080"
+    MAX_LOGIN_ATTEMPTS: int = 5
+    LOCKOUT_DURATION: int = 15
+    CORS_ALLOW_CREDENTIALS: bool = True
+    COOKIE_SECURE: bool = False
+    LOG_LEVEL: str = "INFO"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
@@ -40,3 +60,14 @@ def get_settings() -> Settings:
     Get the application settings
     """
     return Settings()
+
+@lru_cache(maxsize=1)
+def get_cors_origin() -> list[str]:
+    """
+    Parse and returns CORS origin as a list
+
+    Returns:
+        List of allowed CORS origin
+    """
+    origins = Settings.CORS_ORIGIN.split(",")
+    return [origin.split() for origin in origins if origin.strip()]
