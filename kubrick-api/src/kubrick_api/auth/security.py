@@ -1,44 +1,25 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from kubrick_api.config import get_settings
 from kubrick_api.auth.schema import TokenPayload
 import logging
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,
-    bcrypt__default_rounds=12
-)
-
+hash_gen = PasswordHash.recommended()
 
 def hash_password(password: str) -> str:
-    # Bcrypt has 72-byte limit (Blowfish algorithm)
-    password_stripped = password.strip()
-    password_bytes = password_stripped.encode('utf-8')[:72]
-    password_truncated = password_bytes.decode('utf-8', errors='ignore')
-    hashed = pwd_context.hash(password_truncated)
-    logger.info(f"[HASH] Original: {password_stripped[:20]}... | Bytes len: {len(password_bytes)} | Hash: {hashed}")
+    hashed = hash_gen.hash(password)
+    print(f"[HASH] Original: {hashed}")
     return hashed
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Bcrypt has 72-byte limit (Blowfish algorithm)
-    password_stripped = plain_password.strip()
-    password_bytes = password_stripped.encode('utf-8')[:72]
-    password_truncated = password_bytes.decode('utf-8', errors='ignore')
-
-    logger.info(f"[VERIFY] Original: {password_stripped[:20]}... | Bytes len: {len(password_bytes)} | Truncated: {password_truncated[:20]}...")
-    logger.info(f"[VERIFY] Stored hash: {hashed_password}")
-    logger.info(f"[VERIFY] Hash type: {type(hashed_password)} | Pwd type: {type(password_truncated)}")
-
     try:
-        result = pwd_context.verify(password_truncated, hashed_password)
+        print(plain_password,"plainpassword ---- ")
+        result = hash_gen.verify(plain_password, hashed_password)
         logger.info(f"[VERIFY] Result: {result}")
         return result
     except Exception as e:

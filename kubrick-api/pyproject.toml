@@ -15,8 +15,7 @@ dependencies = [
     "loguru>=0.7.3",
     "opencv-python>=4.13.0.90",
     "opik>=1.9.87",
-    "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0,<5.0.0",
+    "bcrypt>=4.0.0",
     "pixeltable>=0.5.12",
     "psycopg2-binary>=2.9.11",
     "pydantic-settings>=2.12.0",
@@ -25,6 +24,7 @@ dependencies = [
     "python-multipart>=0.0.21",
     "ruff>=0.14.13",
     "sqlalchemy>=2.0.45",
+    "pwdlib[argon2]>=0.3.0",
 ]
 
 
