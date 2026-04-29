@@ -1,5 +1,6 @@
 import { Message } from "@/context/message-context";
 import { ImagePreview } from "./image_preview";
+import { buildApiUrl } from "@/lib/api-client";
 
 interface MessageListProps {
   messages: Message[];
@@ -25,9 +26,9 @@ export default function MessageList({ messages }: MessageListProps) {
                     <video
                   controls
                   className="w-full rounded-md"
-                  src={`http://localhost:8080/media/${msg.clip_path}`}/>
+                  src={buildApiUrl(`/media/${msg.clip_path}`)}/>
                  : 
-                <ImagePreview uri={`http://localhost:8080/media/${msg.clip_path}`}/>
+                <ImagePreview uri={buildApiUrl(`/media/${msg.clip_path}`)}/>
                 }
                 
                   Your browser does not support the video tag.

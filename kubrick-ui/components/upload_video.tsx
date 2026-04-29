@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useRef } from 'react';
+import { apiFetch, apiRequest } from '@/lib/api-client';
 
 type UploadResponse = {
   message: string;
@@ -10,10 +11,10 @@ type UploadResponse = {
 const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void }> = ({ onUploadSuccess }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Handle drag events
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
@@ -22,7 +23,7 @@ const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void 
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
@@ -32,13 +33,13 @@ const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void 
   };
 
   // Triggered by clicking the area
-  const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
       uploadFile(e.target.files[0]);
     }
   };
 
-  const uploadFile = async (file) => {
+  const uploadFile = async (file: File) => {
     // Basic validation
     if (!file.type.startsWith('video/')) {
       alert("Please upload a valid video file.");
@@ -52,16 +53,14 @@ const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void 
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8080/upload-video', { method: 'POST', body: formData });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${text}`);
-      }
-      const data: UploadResponse = await response.json();
-      
-      const process_video_res = await fetch('http://localhost:8080/process-video', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({video_path: data.video_path})})
-      console.log(process_video_res,"process_video_api")
-      // call the provided callback with the structured response
+      const uploadResponse = await apiRequest('/upload-video', { method: 'POST', body: formData });
+      const data: UploadResponse = await uploadResponse.json();
+
+      await apiFetch('/process-video', {
+        method: 'POST',
+        body: JSON.stringify({ video_path: data.video_path }),
+      })
+
       onUploadSuccess(data);
     } catch (error) {
       console.error("Upload failed:", error);
@@ -77,7 +76,7 @@ const VideoUploader: React.FC<{ onUploadSuccess: (resp: UploadResponse) => void 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef?.current.click()}
+        onClick={() => fileInputRef.current?.click()}
         className={`relative group cursor-pointer border-2 border-dashed rounded-xl p-2 transition-all duration-200 flex flex-col items-center justify-center
           ${isDragging 
             ? 'border-blue-500 bg-blue-50' 

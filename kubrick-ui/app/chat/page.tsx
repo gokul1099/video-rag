@@ -6,6 +6,7 @@ import { MessageProvider, useMessages } from "@/context/message-context";
 import MessageInput from "@/components/message_input";
 import MessageList from "@/components/message_list";
 import React from "react";
+import { apiFetch } from "@/lib/api-client";
 
 function Main() {
   const { addUpload, uploads } = useUploads();
@@ -20,19 +21,11 @@ function Main() {
     const body = { message, video_path, image_base64: image_base64 ? image_base64.split(",")[1] : null };
 
     try {
-      const res = await fetch("http://localhost:8080/chat", {
+      const data = await apiFetch<{ message?: string; clip_path?: string }>("/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const textErr = await res.text();
-        addMessage({ role: "assistant", content: `Error: ${res.status} ${textErr}` });
-        return;
-      }
-
-      const data = await res.json();
       const assistantText = data?.message ?? JSON.stringify(data);
       const clipPath = data?.clip_path;
       addMessage({

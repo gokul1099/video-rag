@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState, useRef } from "react";
 import { useUploads } from "../context/upload_context";
+import { apiRequest } from '@/lib/api-client';
 
 type MediaMap = Record<string, { url?: string; loading: boolean; error?: string }>
 
@@ -23,16 +24,12 @@ const UploadList: React.FC = () => {
       const key = u.task_id;
       if (mediaMap[key]?.loading || mediaMap[key]?.url) return;
 
-      const endpoint = `http://localhost:8080/media/${encodeURIComponent(u.video_path)}`;
-
       setMediaMap((m) => ({ ...m, [key]: { loading: true } }));
 
       (async () => {
         try {
-          const res = await fetch(endpoint);
-          if (!res.ok) throw new Error(`status ${res.status}`);
+          const res = await apiRequest(`/media/${encodeURIComponent(u.video_path)}`);
 
-          // Otherwise, use final response URL (may be redirected)
           const finalUrl = res.url;
           setMediaMap((m) => ({ ...m, [key]: { url: finalUrl, loading: false } }));
         } catch (err: any) {
