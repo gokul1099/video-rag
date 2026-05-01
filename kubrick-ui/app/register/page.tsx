@@ -9,7 +9,7 @@ export default function Register() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,21 +24,40 @@ export default function Register() {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+    if (!email || !password || !fullName) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
       return;
     }
 
     setLoading(true);
     try {
-      const data = await apiFetch<{ token?: string; access_token?: string }>("/register", {
+      const data = await apiFetch<{ access_token: string; refresh_token: string; expires_in: number }>("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, full_name: fullName }),
       });
-      const token = data.token || data.access_token;
-      if (token) {
-        Cookies.set("authToken", token, { expires: 7, sameSite: "lax" });
+
+      if (data.access_token) {
+        // Store access token (expires_in is in seconds, convert to days)
+        const expiresInDays = data.expires_in ? data.expires_in / 86400 : 7;
+        Cookies.set("authToken", data.access_token, { expires: expiresInDays, sameSite: "lax" });
       }
+
+      if (data.refresh_token) {
+        // Store refresh token (longer expiry, e.g., 30 days)
+        Cookies.set("refreshToken", data.refresh_token, { expires: 30, sameSite: "lax" });
+      }
+
       router.push("/chat");
     } catch (err: any) {
       setError(err.message || "Registration failed");
@@ -62,6 +81,26 @@ export default function Register() {
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
+
+          <div>
+            <label htmlFor="full_name" className="block text-sm/6 font-medium text-gray-100">
+              Full Name
+            </label>
+            <div className="mt-2">
+              <input
+                id="full_name"
+                name="full_name"
+                type="text"
+                required
+                autoComplete="full_name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={loading}
+                className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
+              />
+            </div>
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm/6 font-medium text-gray-100">
               Email address
@@ -94,25 +133,6 @@ export default function Register() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm/6 font-medium text-gray-100">
-              Confirm Password
-            </label>
-            <div className="mt-2">
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
                 className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
               />

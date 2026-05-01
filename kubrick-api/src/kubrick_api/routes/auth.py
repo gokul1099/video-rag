@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from kubrick_api.auth.service import AuthService
-from kubrick_api.auth.schema import (UserLogin, UserCreate, Token, UserResponse)
+from kubrick_api.auth.schema import (UserLogin, UserCreate, Token, UserResponse, TokenRefresh)
 from kubrick_api.auth.dependencies import get_curret_user
 from kubrick_api.db.models import User
 from kubrick_api.db.db import get_db
+
+# TODO: Need to implement token rotation and revocation by storing the token
+
 
 router = APIRouter(
     prefix="/auth",
@@ -41,13 +44,20 @@ async def login(request: UserLogin, db: Session = Depends(get_db)) -> Token:
         token_response = auth_service.authenticate_user(request)
         return token_response
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid email or password {e}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Failed to authenticate {e}')
     
-# @router.post("/refresh", response_model=Token, status_code=status.HTTP_200_OK, summary="Refresh access token", description="Get a new access token using a refresh token")
-# async def refresh(request: dict, db:Session = Depends(get_db)):
-#     refresh_token = request.get("refresh_token")
-#     if not refresh_token:
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="refresh_token required in request body")
-    
+@router.post("/refresh", response_model=Token, status_code=status.HTTP_200_OK, summary="Refresh access token", description="Get a new access token using a refresh token")
+async def refresh(request: TokenRefresh, db:Session = Depends(get_db)):
+    refresh_token = request.refresh_token
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="refresh_token required in request body")
+    auth_service = AuthService(db=db)
+    try:
+        token_response = auth_service.refresh_token(refresh_token=refresh_token)
+        return token_response
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f'Failed to refresh token {e}')
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to refresh token {e}")

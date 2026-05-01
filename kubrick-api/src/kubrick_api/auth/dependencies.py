@@ -25,13 +25,13 @@ def get_curret_user(credentials: HTTPAuthorizationCredentials | None = Depends(s
     try:
         payload = verify_token(token=token)
 
-        if payload.get("type") != "access":
+        if payload.type != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        user_id_str = payload.get("sub")
+        user_id_str = payload.sub
         if not user_id_str:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

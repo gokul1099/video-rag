@@ -53,7 +53,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.include_router(AuthRouter, prefix="/api/v1")
+app.include_router(AuthRouter, prefix="")
 
 app.add_middleware(
     CORSMiddleware,

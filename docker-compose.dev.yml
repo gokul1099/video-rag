@@ -37,6 +37,7 @@ services:
       - ./.vscode:/app/.vscode
       - shared_media:/app/shared_media
       - hf_cache:/home/pixeltable/.cache/huggingface
+      - ./kubrick-mcp/src:/app/src
 
     deploy:
       resources:
@@ -80,6 +81,10 @@ services:
       - agent-network
     volumes:
       - shared_media:/app/shared_media
+      - ./kubrick-ui/app:/app/app
+      - ./kubrick-ui/components:/app/components
+      - ./kubrick-ui/context:/app/context
+      - ./kubrick-ui/lib:/app/lib
 
 networks:
   agent-network:

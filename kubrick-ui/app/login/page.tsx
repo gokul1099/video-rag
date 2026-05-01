@@ -22,16 +22,41 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await apiFetch<{ token?: string; access_token?: string }>("/login", {
+      const data = await apiFetch<{ access_token: string; refresh_token: string; expires_in: number }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      const token = data.token || data.access_token;
-      if (token) {
-        Cookies.set("authToken", token, { expires: 7, sameSite: "lax" });
+
+      if (data.access_token) {
+        // Store access token (expires_in is in seconds, convert to days)
+        const expiresInDays = data.expires_in ? data.expires_in / 86400 : 7;
+        Cookies.set("authToken", data.access_token, { expires: expiresInDays, sameSite: "lax" });
       }
+
+      if (data.refresh_token) {
+        // Store refresh token (longer expiry, e.g., 30 days)
+        Cookies.set("refreshToken", data.refresh_token, { expires: 30, sameSite: "lax" });
+      }
+
       router.push("/chat");
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
@@ -42,14 +67,6 @@ export default function Login() {
 
   return (
     <>
-      {/*
-        This example requires updating your template:
-
-        ```
-        <html class="h-full bg-gray-900">
-        <body class="h-full">
-        ```
-      */}
       <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <img
