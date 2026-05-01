@@ -39,49 +39,42 @@ export default function MessageInput({ onSend }: MessageInputProps) {
         fileInput.click();
     }
     return (
-        <div className="fixed bottom-0 left-0 right-0 sm:left-64 bg-transparent border-t px-4 py-3 max-width:700px; margin: 100px auto;">
+        <div className="w-full relative">
             {imagePreview && (
                 <div className="mb-3 relative inline-block">
-                    <img src={imagePreview} alt="Preview" className="max-h-32 rounded-lg" />
+                    <img src={imagePreview} alt="Preview" className="max-h-32 rounded-lg border border-white/20 shadow-lg" />
                     <button
                         onClick={handleRemoveImage}
                         type="button"
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold"
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow"
                     >
                         ×
                     </button>
                 </div>
             )}
-            <form className="flex items-center">
-                <label htmlFor="voice-search" className="sr-only">Search</label>
-                <div className="relative w-full">
+            <form className="flex items-center space-x-2" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+                <label htmlFor="voice-search" className="sr-only">Message</label>
+                <div className="relative flex-1">
                     <input type="text"
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
                         id="voice-search"
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                        placeholder="Enter your query here"
+                        className="bg-white/5 border border-white/10 text-white text-sm rounded-full focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-4 pr-12 py-3 placeholder-gray-400 backdrop-blur-sm transition-all shadow-sm"
+                        placeholder="Type a message..."
                         required={true} />
-                    <button onClick={onClickAttach} type="button" className="flex absolute inset-y-0 right-0 items-center pr-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <button onClick={onClickAttach} type="button" className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                         </svg>
                     </button>
                 </div>
-                <button onClick={handleSend} type="button" className="inline-flex items-center py-2.5 px-3 ml-2 text-sm font-medium text-white bg-blue-700 border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <button type="submit" className="inline-flex items-center justify-center w-12 h-12 text-sm font-medium text-white bg-indigo-500 rounded-full hover:bg-indigo-400 focus:ring-4 focus:outline-none focus:ring-indigo-500/50 transition-colors shadow-lg shadow-indigo-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
                         <line x1="22" y1="2" x2="11" y2="13" />
                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
                 </button>
             </form>
-
         </div>
     );
 }
