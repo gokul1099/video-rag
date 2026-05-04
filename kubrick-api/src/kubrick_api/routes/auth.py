@@ -19,17 +19,17 @@ router = APIRouter(
 )
 
 @router.post("/register", 
-             response_model=UserResponse, 
+             response_model=Token, 
              status_code=status.HTTP_201_CREATED,
              summary="Ragister a new user",
              description="Create a new user account with email and password"
              )
-async def resigter(request: UserCreate, db:Session = Depends(get_db)) -> UserResponse:
+async def resigter(request: UserCreate, db:Session = Depends(get_db)) -> Token:
     auth_service = AuthService(db=db)
     try:
-        user = auth_service.register_user(request=request)
+        token = auth_service.register_user(request=request)
 
-        return UserResponse.model_validate(user)
+        return token
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     

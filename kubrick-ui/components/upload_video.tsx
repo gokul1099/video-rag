@@ -6,6 +6,10 @@ import { useUploads } from '@/context/upload_context';
 type UploadResponse = {
   message: string;
   video_path: string;
+};
+
+type ProcessResponse = {
+  message: string;
   task_id: string;
 };
 
@@ -49,6 +53,29 @@ const VideoUploader: React.FC = () => {
     }
   }
 
+  const pollTaskStatus = async (taskId: string, localId: string) => {
+    try {
+      const response = await apiRequest(`/video/task-status/${taskId}`);
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        updateUpload(localId, { status: 'completed' });
+      } else if (data.status === 'failed') {
+        updateUpload(localId, { status: 'error', error: 'Processing failed' });
+      } else if (data.status === 'not_found') {
+        updateUpload(localId, { status: 'error',
+           error: 'Task not found on server' });
+      } else {
+        // Wait 2 seconds before checking again (Short Polling)
+        setTimeout(() => pollTaskStatus(taskId, localId), 2000);
+      }
+    } catch (error) {
+      console.error("Polling error", error);
+      // Wait a moment before retrying if there's a network error
+      setTimeout(() => pollTaskStatus(taskId, localId), 2000);
+    }
+  };
+
   const uploadFile = async (file: File) => {
     // Basic validation
     if (!file.type.startsWith('video/')) {
@@ -57,7 +84,7 @@ const VideoUploader: React.FC = () => {
     }
 
     const localId = Math.random().toString(36).substring(7);
-    
+
     addUpload({
       id: localId,
       fileName: file.name,
@@ -69,26 +96,32 @@ const VideoUploader: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const uploadResponse = await apiRequest('/video/upload', { method: 'POST', body: formData });
-      const data: UploadResponse = await uploadResponse.json();
+      // 1. Upload the video
+      const uploadResponse = await apiRequest('/video/upload-video', { method: 'POST', body: formData });
+      const uploadData: UploadResponse = await uploadResponse.json();
 
       updateUpload(localId, {
         status: 'processing',
-        task_id: data.task_id,
-        video_path: data.video_path
+        video_path: uploadData.video_path
       });
 
-      await apiFetch('/video/process-video', {
+      // 2. Start the processing task
+      const processResponse = await apiRequest('/video/process', {
         method: 'POST',
-        body: JSON.stringify({ video_path: data.video_path }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_path: uploadData.video_path }),
       });
+      const processData: ProcessResponse = await processResponse.json();
 
       updateUpload(localId, {
-        status: 'completed'
+        task_id: processData.task_id
       });
-      
+
+      // 3. Begin Long Polling
+      pollTaskStatus(processData.task_id, localId);
+
     } catch (error: any) {
-      console.error("Upload failed:", error);
+      console.error("Upload/Process failed:", error);
       updateUpload(localId, {
         status: 'error',
         error: String(error)
@@ -104,14 +137,14 @@ const VideoUploader: React.FC = () => {
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={`relative group cursor-pointer border-2 border-dashed rounded-xl p-6 transition-all duration-200 flex flex-col items-center justify-center
-          ${isDragging 
-            ? 'border-indigo-500 bg-indigo-500/10' 
+          ${isDragging
+            ? 'border-indigo-500 bg-indigo-500/10'
             : 'border-white/20 hover:border-white/40 bg-white/5'}`}
       >
-        <input 
-          type="file" 
-          className="hidden" 
-          accept="video/*" 
+        <input
+          type="file"
+          className="hidden"
+          accept="video/*"
           multiple
           ref={fileInputRef}
           onChange={handleFileChange}

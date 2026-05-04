@@ -1,5 +1,13 @@
 from pydantic import BaseModel, Field
+from enum import Enum
 
+
+class TaskStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    NOT_FOUND = "not_found"
 
 
 class UploadVideoResponse(BaseModel):

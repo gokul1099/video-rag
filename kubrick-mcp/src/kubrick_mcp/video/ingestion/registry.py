@@ -34,10 +34,10 @@ def get_registry() -> Dict[str, CachedTableMetadata]:
                 latest_file = max(registry_files)
                 latest_registry = Path(cc.DEFAULT_CACHED_TABLES_REGISTRY_DIR) / latest_file
                 with open(str(latest_registry), 'r') as f:
-                    VIDEO_INDEXES_REGISTRY = json.loads(f)
+                    VIDEO_INDEXES_REGISTRY = json.load(f)
                     for key, value in VIDEO_INDEXES_REGISTRY.items():
                         if isinstance(value, str):
-                            value = json.load(value)
+                            value = json.loads(value)
                         VIDEO_INDEXES_REGISTRY[key] = CachedTableMetadata(**value)
                 logger.info(f"Loading registry from {latest_registry}")
         except FileNotFoundError:
