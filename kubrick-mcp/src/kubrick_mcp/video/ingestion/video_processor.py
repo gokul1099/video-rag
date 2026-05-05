@@ -165,7 +165,8 @@ class VideoProcessor():
     def _setup_frame_processing(self):
         logger.info("Setting up frame processing")
         self._create_frames_view()
-        self._add_frame_embedding_index()
+        #While using huggingface for clip model it is downloaindg torcha and other module which causes out of space issue not removing frame index for now
+        # self._add_frame_embedding_index()
         self._add_frame_captioning()
         self._add_caption_embedding_index()
         logger.info("Done Setting up frame processing")
@@ -200,15 +201,15 @@ class VideoProcessor():
         logger.info("Done Adding frame captioning")
 
     
-    def _add_frame_embedding_index(self):
-        logger.info("Adding frame embedding index")
+    # def _add_frame_embedding_index(self):
+    #     logger.info("Adding frame embedding index")
 
-        self.frames_view.add_embedding_index(
-            column=self.frames_view.resized_frame,
-            image_embed=clip.using(model_id=settings.IMAGE_SIMILARITY_EMBD_MODEL),
-            if_exists="replace_force"
-        )
-        logger.info("Done Adding frame embedding index")
+    #     self.frames_view.add_embedding_index(
+    #         column=self.frames_view.resized_frame,
+    #         image_embed=clip.using(model_id=settings.IMAGE_SIMILARITY_EMBD_MODEL),
+    #         if_exists="replace_force"
+    #     )
+    #     logger.info("Done Adding frame embedding index")
 
     def _add_caption_embedding_index(self):
         logger.info("Adding caption embedding index")
