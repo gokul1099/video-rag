@@ -14,7 +14,8 @@ RUN apt-get update && \
     ffmpeg \
     ca-certificates \
     curl \
-    gosu && \
+    gosu \
+    netcat-openbsd && \
     update-ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
