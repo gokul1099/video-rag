@@ -18,7 +18,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 180s 
 
   kubrick-mcp:
     container_name: kubrick-mcp
@@ -50,6 +49,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 180s
 
   
   kubrick-api:
@@ -78,6 +78,7 @@ services:
         awslogs-region: us-west-2
         awslogs-group: /ecs/kubrick-api
         awslogs-stream: api-server
+        awslogs-create-group: "true"
     healthcheck:
       test: ["CMD","curl","-f", "http://localhost:8080/docs"]
       interval: 30s
