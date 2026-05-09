@@ -71,6 +71,12 @@ services:
     restart: unless-stopped
     networks:
       - agent-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-west-2
+        awslogs-group: /ecs/kubrick-api
+        awslogs-stream: api-server
     healthcheck:
       test: ["CMD","curl","-f", "http://localhost:8080/docs"]
       interval: 30s
