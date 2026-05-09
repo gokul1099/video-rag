@@ -78,23 +78,6 @@ services:
       retries: 3
       start_period: 60s
   
-  kubrick-ui:
-    container_name: kubrick-ui
-    build: 
-      context: ./kubrick-ui
-      dockerfile: Dockerfile
-      target: runner
-      args:
-        - NEXT_PUBLIC_URL=http://localhost:8080
-    ports:
-      - "3000:3000"
-    depends_on:
-      - kubrick-api
-    networks:
-      - agent-network
-    environment:
-      - NODE_ENV=production
-  
 volumes:
   shared_media:
   hf_cache:
