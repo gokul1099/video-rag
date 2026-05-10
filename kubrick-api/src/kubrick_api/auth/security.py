@@ -5,10 +5,13 @@ from pwdlib import PasswordHash
 from kubrick_api.config import get_settings
 from kubrick_api.auth.schema import TokenPayload
 import logging
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 hash_gen = PasswordHash.recommended()
+security = HTTPBearer()
 
 def hash_password(password: str) -> str:
     hashed = hash_gen.hash(password)
@@ -107,3 +110,14 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenPayloa
         return None
     except Exception as e:
         logger.error(f"Unexpected error during token verification: {str(e)}")
+
+
+def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
+    token = credentials.credentials
+    payload = verify_token(token)
+    if payload is not None:
+        return payload.sub
+    
+    logger.error("Could not extract user_id, Token is invalid or expired")
+    raise HTTPException(status_code=401, detail="User is not authorised")
+

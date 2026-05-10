@@ -14,6 +14,7 @@ export type Message = {
 type MessageContextType = {
 	messages: Message[];
 	addMessage: (m: Omit<Message, "id" | "timestamp">) => Message;
+	loadMessages: (messages: Message[]) => void;
 	clear: () => void;
 };
 
@@ -32,9 +33,13 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		return msg;
 	};
 
+	const loadMessages = (msgs: Message[]) => {
+		setMessages(msgs);
+	};
+
 	const clear = () => setMessages([]);
 
-	return <MessageContext.Provider value={{ messages, addMessage, clear }}>{children}</MessageContext.Provider>;
+	return <MessageContext.Provider value={{ messages, addMessage, loadMessages, clear }}>{children}</MessageContext.Provider>;
 };
 
 export const useMessages = () => {

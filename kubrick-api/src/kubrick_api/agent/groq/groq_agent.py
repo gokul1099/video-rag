@@ -1,3 +1,4 @@
+
 import json
 import uuid
 from datetime import datetime
@@ -7,6 +8,7 @@ import opik
 from groq import Groq
 from loguru import logger
 from opik import Attachment, opik_context
+import httpx
 
 from kubrick_api import tools
 from kubrick_api.agent.base_agent import BaseAgent
@@ -31,7 +33,10 @@ class GroqAgent(BaseAgent):
             memory,
             disable_tools
         )
-        self.client = Groq(api_key=settings.GROQ_API_KEY)
+        self.client = Groq(
+            api_key=settings.GROQ_API_KEY,
+            http_client=httpx.Client(trust_env=False)
+        )
         self.instructor_client = instructor.from_groq(self.client, mode=instructor.Mode.JSON)
         self.thread_id = str(uuid.uuid4())
     
@@ -45,11 +50,12 @@ class GroqAgent(BaseAgent):
         self,
         system_prompt: str,
         user_message: str,
+        session_id: int,
         image_base64: Optional[str] = None,
-        n: int = settings.AGENT_MEMORY_SIZE
+        n: int = settings.AGENT_MEMORY_SIZE,
     ) -> List[Dict[str, Any]] :
         history = [{"role" : "system", "content": system_prompt}]
-        history += [{"role": record.role, "content": record.content} for record in self.memory.get_latest(n)]
+        history += [{"role": record.role, "content": record.content} for record in self.memory.get_by_session_id(str(session_id), n)]
 
         user_content = (
             [
@@ -104,12 +110,12 @@ class GroqAgent(BaseAgent):
             return f"Error executing tool {function_name}: {str(e)}"
     @opik.track(name="tool_use",type="tool")
 
-    async def _run_with_tool(self, message:str , video_path:str ,image_base64: str | None = None) -> str:
+    async def _run_with_tool(self, message:str , video_path:str, session_id: int, image_base64: str | None = None) -> str:
         """Execute chat completion with tool usage"""
         tool_use_system_prompt = self.tool_use_system_prompt.format(
             is_image_provided=bool(image_base64)
         )
-        chat_history = self._build_chat_history(tool_use_system_prompt, message)
+        chat_history = self._build_chat_history(tool_use_system_prompt, message, session_id, image_base64=image_base64)
         logger.info(f"Logging self tools{self.tools}")
 
         response = (
@@ -181,34 +187,37 @@ class GroqAgent(BaseAgent):
         
 
     @opik.track(name="generate-response", type="llm")
-    def _response_general(self, message: str) -> GeneralResponseModel:
-        chat_history = self._build_chat_history(self.general_system_prompt, message)
+    def _response_general(self, message: str, session_id: int) -> GeneralResponseModel:
+        chat_history = self._build_chat_history(self.general_system_prompt, message, session_id)
         response = self.instructor_client.chat.completions.create(
             model=settings.GROQ_GENERAL_MODEL,
             messages=chat_history,
             response_model=GeneralResponseModel
         )
         return response
-    def _add_to_memory(self,role: str, content: str) -> None:
+    def _add_to_memory(self,role: str, content: str, session_id: int ,user_id:int) -> None:
         """Add a message to the agent's memory"""
         self.memory.insert(
             MemoryRecord(
                 message_id=str(uuid.uuid4()),
                 role=role,
                 content=content,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
+                session_id=str(session_id),
             )
         )
     
     @opik.track(name="memory-insertion", type="general")
-    def _add_memoery_pair(self, user_message: str, assitant_message:str) -> None:
-        self._add_to_memory("user",user_message)
-        self._add_to_memory("assistant", assitant_message)
+    def _add_memory_pair(self, user_message: str, assitant_message:str, session_id, user_id) -> None:
+        self._add_to_memory("user",user_message, session_id, user_id)
+        self._add_to_memory("assistant", assitant_message, session_id, user_id)
     
     @opik.track(name="chat", type="general")
     async def chat(
         self,
         message: str,
+        session_id: int,
+        user_id: int,
         video_path: Optional[str] = None,
         image_base64: Optional[str] = None,
     ) -> AssitantMessageResponse:
@@ -219,11 +228,11 @@ class GroqAgent(BaseAgent):
         logger.info(f"Tool required: {tool_required}")
 
         if tool_required:
-            response = await self._run_with_tool(message, video_path, image_base64)
+            response = await self._run_with_tool(message, video_path, session_id, image_base64)
         else:
             logger.info("Running general response")
-            response = self._response_general(message)
+            response = self._response_general(message, session_id)
         
-        self._add_memoery_pair(message, response.message)
+        self._add_memory_pair(message, response.message, session_id, user_id)
 
         return AssitantMessageResponse(**response.dict())

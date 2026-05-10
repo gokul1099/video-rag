@@ -33,6 +33,10 @@ services:
       - agent-network
     environment:
       - HF_HOME=/home/pixeltable/.cache/huggingface
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
     volumes:
       - ./.vscode:/app/.vscode
       - shared_media:/app/shared_media

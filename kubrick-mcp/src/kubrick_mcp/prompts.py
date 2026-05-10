@@ -1,5 +1,11 @@
+import os
+for var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']:
+    os.environ.pop(var, None)
+
 import opik
 from loguru import logger
+from dotenv import load_dotenv
+load_dotenv()
 
 client = opik.Opik()
 
