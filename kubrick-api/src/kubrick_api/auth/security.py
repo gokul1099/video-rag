@@ -36,7 +36,7 @@ def create_access_token(user_id: int, email: str, expires_delta: Optional[timede
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode= {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": email,
         "exp": expire,
         "iat": datetime.now(timezone.utc),
@@ -61,7 +61,7 @@ def create_refresh_token(user_id: int, email: str, expires_delta: Optional[timed
         expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     
     to_encode = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": email,
         "exp": expire,
         "iat": datetime.now(timezone.utc),
@@ -84,7 +84,8 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenPayloa
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        user_id: int = payload.get("sub")
+        user_id_str = payload.get("sub")
+        user_id: int | None = int(user_id_str) if user_id_str else None
         email: str = payload.get("email")
         exp: int = payload.get("exp")
         iat: int = payload.get("iat")
