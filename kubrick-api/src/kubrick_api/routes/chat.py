@@ -50,12 +50,12 @@ async def chat(session_id:int, request: UserMessageRequest, fastapi_request: Req
     await agent.setup()
     try:
         response = await agent.chat(
-            request.message, 
-            request.video_path,
-            request.image_base64, 
-            session_id,
-            user_id
-            )
+            message=request.message,
+            session_id=session_id,
+            user_id=user_id,
+            video_path=request.video_path,
+            image_base64=request.image_base64
+        )
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

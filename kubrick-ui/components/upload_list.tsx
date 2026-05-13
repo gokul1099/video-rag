@@ -29,7 +29,8 @@ const UploadList: React.FC = () => {
 
       (async () => {
         try {
-          const res = await apiRequest(`/media/${encodeURIComponent(u.video_path as string)}`);
+          const fileName = (u.video_path as string).split('/').pop();
+          const res = await apiRequest(`/video/media/${encodeURIComponent(fileName as string)}`);
 
           const finalUrl = res.url;
           setMediaMap((m) => ({ ...m, [key]: { url: finalUrl, loading: false } }));

@@ -37,10 +37,10 @@ export default function MessageList({ messages }: MessageListProps) {
                   <video
                     controls
                     className="w-full max-h-64 object-contain bg-black"
-                    src={buildApiUrl(`/media/${msg.clip_path}`)} 
+                    src={buildApiUrl(`/video/media/${msg.clip_path.split('/').pop()}`)} 
                   />
                 ) : (
-                  <ImagePreview uri={buildApiUrl(`/media/${msg.clip_path}`)}/>
+                  <ImagePreview uri={buildApiUrl(`/video/media/${msg.clip_path.split('/').pop()}`)}/>
                 )}
               </div>
             )}
