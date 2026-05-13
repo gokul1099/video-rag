@@ -4,16 +4,17 @@ import { v4 as uuidv4 } from "uuid";
 
 export type Message = {
 	id: string;
-	role: "user" | "assistant";
+	role: "user" | "assistant" | "system";
 	content: string;
 	timestamp: string;
-	clip_path?: string; // Optional video clip path from API response
-	image_base64?: string; // Optional image base64 from user
+	clip_path?: string;
+	image_base64?: string;
 };
 
 type MessageContextType = {
 	messages: Message[];
 	addMessage: (m: Omit<Message, "id" | "timestamp">) => Message;
+	updateMessage: (id: string, updates: Partial<Omit<Message, "id" | "timestamp">>) => void;
 	loadMessages: (messages: Message[]) => void;
 	clear: () => void;
 };
@@ -33,13 +34,17 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		return msg;
 	};
 
+	const updateMessage = (id: string, updates: Partial<Omit<Message, "id" | "timestamp">>) => {
+		setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+	};
+
 	const loadMessages = (msgs: Message[]) => {
 		setMessages(msgs);
 	};
 
 	const clear = () => setMessages([]);
 
-	return <MessageContext.Provider value={{ messages, addMessage, loadMessages, clear }}>{children}</MessageContext.Provider>;
+	return <MessageContext.Provider value={{ messages, addMessage, updateMessage, loadMessages, clear }}>{children}</MessageContext.Provider>;
 };
 
 export const useMessages = () => {

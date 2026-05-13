@@ -50,7 +50,8 @@ class Memory:
     def get_by_message_id(self, message_id: str) -> MemoryRecord:
         return self._memory_table.where(self._memory_table.message_id == message_id).collect()[0]
     
-    def get_by_session_id(self, session_id: str, n: int) -> MemoryRecord:
-        message_in_session =  self._memory_table.where(self._memory_table.session_id == session_id).collect()
-        return [MemoryRecord(**record) for record in message_in_session]
+    def get_by_session_id(self, session_id: str, n: int = None) -> list[MemoryRecord]:
+        message_in_session = self._memory_table.where(self._memory_table.session_id == session_id).collect()
+        records = [MemoryRecord(**record) for record in message_in_session]
+        return records[-n:] if n else records
     

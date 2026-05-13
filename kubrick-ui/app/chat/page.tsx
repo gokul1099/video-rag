@@ -1,12 +1,10 @@
 "use client"
-import VideoUploader from "@/components/upload_video";
 import { UploadProvider, useUploads } from "@/context/upload_context";
-import UploadList from "@/components/upload_list";
 import { MessageProvider, useMessages } from "@/context/message-context";
 import MessageInput from "@/components/message_input";
 import MessageList from "@/components/message_list";
-import React, { useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api-client";
+import React, { useEffect, useState, useCallback } from "react";
+import { apiFetch, apiRequest } from "@/lib/api-client";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -19,8 +17,9 @@ interface ChatSession {
 
 function Main() {
   const router = useRouter();
-  const { uploads } = useUploads();
-  const { addMessage, messages, loadMessages, clear } = useMessages();
+  const { uploads, addUpload, updateUpload } = useUploads();
+  const { addMessage, updateMessage, messages, loadMessages, clear } = useMessages();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -127,6 +126,73 @@ function Main() {
     }
   };
 
+  const pollTaskStatus = useCallback(async (taskId: string, msgId: string, fileName: string, videoPath?: string) => {
+    try {
+      const response = await apiRequest(`/video/task-status/${taskId}`);
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        updateMessage(msgId, { content: `✅ Video ready: ${fileName}`, clip_path: videoPath });
+        setIsProcessing(false);
+      } else if (data.status === 'failed') {
+        updateMessage(msgId, { content: `❌ Processing failed: ${fileName}` });
+        setIsProcessing(false);
+      } else if (data.status === 'not_found') {
+        updateMessage(msgId, { content: `❌ Task not found: ${fileName}` });
+        setIsProcessing(false);
+      } else {
+        setTimeout(() => pollTaskStatus(taskId, msgId, fileName, videoPath), 2000);
+      }
+    } catch (error) {
+      console.error("Polling error", error);
+      setTimeout(() => pollTaskStatus(taskId, msgId, fileName, videoPath), 2000);
+    }
+  }, [updateMessage]);
+
+  const handleVideoUpload = async (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      addMessage({ role: "system", content: `⚠️ Please select a valid video file.` });
+      return;
+    }
+
+    setIsProcessing(true);
+    const localId = Math.random().toString(36).substring(7);
+    const msg = addMessage({ role: "system", content: `📤 Uploading ${file.name}...` });
+
+    addUpload({
+      id: localId,
+      fileName: file.name,
+      status: 'uploading'
+    });
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const uploadResponse = await apiRequest('/video/upload-video', { method: 'POST', body: formData });
+      const uploadData: { message: string; video_path: string } = await uploadResponse.json();
+
+      updateUpload(localId, { status: 'processing', video_path: uploadData.video_path });
+      updateMessage(msg.id, { content: `⚙️ Processing ${file.name}...` });
+
+      const processResponse = await apiRequest('/video/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_path: uploadData.video_path }),
+      });
+      const processData: { message: string; task_id: string } = await processResponse.json();
+
+      updateUpload(localId, { task_id: processData.task_id });
+
+      pollTaskStatus(processData.task_id, msg.id, file.name, uploadData.video_path);
+    } catch (error: any) {
+      console.error("Upload/Process failed:", error);
+      updateUpload(localId, { status: 'error', error: String(error) });
+      updateMessage(msg.id, { content: `❌ Upload failed: ${file.name}` });
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden">
       <button data-drawer-target="default-sidebar" data-drawer-toggle="default-sidebar" aria-controls="default-sidebar" type="button" className="inline-flex items-center p-2 mt-2 ms-3 text-sm text-gray-400 rounded-lg sm:hidden hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-gray-600">
@@ -161,8 +227,6 @@ function Main() {
             </button>
           </div>
 
-          <VideoUploader />
-          
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-1">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Recent Chats</h3>
             {sessions.map(s => (
@@ -176,12 +240,6 @@ function Main() {
             ))}
           </div>
 
-          <div className="mt-4 border-t border-white/10 pt-4">
-             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Uploads</h3>
-             <div className="h-32 overflow-y-auto pr-2 custom-scrollbar">
-               <UploadList />
-             </div>
-          </div>
         </div>
       </aside>
 
@@ -196,7 +254,7 @@ function Main() {
         
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent pt-10 pb-6 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
-            <MessageInput onSend={handleSendMessage} />
+            <MessageInput onSend={handleSendMessage} onVideoUpload={handleVideoUpload} disabled={isProcessing} />
           </div>
         </div>
       </div>

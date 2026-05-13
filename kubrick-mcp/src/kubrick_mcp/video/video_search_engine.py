@@ -8,6 +8,7 @@ from kubrick_mcp.video.ingestion.tools import decode_image
 
 settings = get_settings()
 
+
 class VideoSearchEngine:
     """A class that provides video search capabilities using different modalities"""
 
@@ -18,42 +19,44 @@ class VideoSearchEngine:
         self.video_index: CachedTable = registry.get_table(video_name)
         if not self.video_index:
             raise ValueError(f"Video index {video_name} not found in registry")
-        self.video_name= video_name
-    
-    def search_by_image(self, image_base64:str, top_k: int) -> List[Dict[str, Any]]:
+        self.video_name = video_name
+
+    def search_by_image(self, image_base64: str, top_k: int) -> List[Dict[str, Any]]:
         """
         Search video clips by image similarity
         """
-        image =decode_image(image_base64)
+        image = decode_image(image_base64)
         sims = self.video_index.frames_view.resized_frame.similarity(image)
         results = self.video_index.frames_view.select(
-            self.video_index.frames_view.pos_msec,
+            self.video_index.frames_view.frame_attrs,
             self.video_index.frames_view.resized_frame,
-            similarity=sims
-        ).order_by(sims, asc=False)
-
-        return [
-            {
-                'start_time': entry["pos_msec"]/1000.0 - settings.DELTA_SECONDS_FRAME_INTERVAL,
-                'end_time': entry['pos_msec'] / 1000.0 + settings.DELTA_SECONDS_FRAME_INTERVAL
-            }
-            for entry in results.limit(top_k).collect()
-        ]
-    def search_by_speech(self, query: str, top_k: int) -> List[Dict[str, Any]]:
-        """Search video clips by speech similarity"""
-
-        sims = self.video_index.audio_chunks_view.chunk_text.similarity(query)
-        results = self.video_index.audio_chunks_view.select(
-            self.video_index.audio_chunks_view.pos,
-            self.video_index.audio_chunks_view.start_time_sec,
-            self.video_index.audio_chunks_view.end_time_sec,
             similarity=sims,
         ).order_by(sims, asc=False)
 
         return [
             {
-                "start_time": float(entry["start_time_sec"]),
-                "end_time": float(entry["end_time_sec"]),
+                "start_time": entry["frame_attrs"]["time"]
+                - settings.DELTA_SECONDS_FRAME_INTERVAL,
+                "end_time": entry["frame_attrs"]["time"]
+                + settings.DELTA_SECONDS_FRAME_INTERVAL,
+            }
+            for entry in results.limit(top_k).collect()
+        ]
+
+    def search_by_speech(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Search video clips by speech similarity"""
+
+        sims = self.video_index.audio_chunks_view.chunk_text.similarity(query)
+        results = self.video_index.audio_chunks_view.select(
+            self.video_index.audio_chunks_view.segment_start,
+            self.video_index.audio_chunks_view.segment_end,
+            similarity=sims,
+        ).order_by(sims, asc=False)
+
+        return [
+            {
+                "start_time": float(entry["segment_start"]),
+                "end_time": float(entry["segment_end"]),
                 "similarity": float(entry["similarity"]),
             }
             for entry in results.limit(top_k).collect()
@@ -64,28 +67,28 @@ class VideoSearchEngine:
 
         sims = self.video_index.frames_view.im_caption.similarity(query)
         results = self.video_index.frames_view.select(
-            self.video_index.frames_view.pos_msec,
+            self.video_index.frames_view.frame_attrs,
             self.video_index.frames_view.im_caption,
             similarity=sims,
         ).order_by(sims, asc=False)
 
-        return[
+        return [
             {
-                "start_time": entry["pos_msec"] / 1000.0 - settings.DELTA_SECONDS_FRAME_INTERVAL,
-                "end_time": entry["pos_msec"] / 1000.0 + settings.DELTA_SECONDS_FRAME_INTERVAL,
-                "similarity": float(entry["similarity"])
+                "start_time": entry["frame_attrs"]["time"]
+                - settings.DELTA_SECONDS_FRAME_INTERVAL,
+                "end_time": entry["frame_attrs"]["time"]
+                + settings.DELTA_SECONDS_FRAME_INTERVAL,
+                "similarity": float(entry["similarity"]),
             }
             for entry in results.limit(top_k).collect()
         ]
-    
 
-    def get_speech_info(self, query: str , top_k:int) -> List[Dict[str, Any]]:
+    def get_speech_info(self, query: str, top_k: int) -> List[Dict[str, Any]]:
         """Get speech text information based on query similarity"""
 
-        sims= self.video_index.audio_chunks_view.chunk_text.similarity(query)
+        sims = self.video_index.audio_chunks_view.chunk_text.similarity(query)
         results = self.video_index.audio_chunks_view.select(
-            self.video_index.audio_chunks_view.chunk_text,
-            similarity=sims
+            self.video_index.audio_chunks_view.chunk_text, similarity=sims
         ).order_by(sims, asc=False)
 
         return [
@@ -96,13 +99,12 @@ class VideoSearchEngine:
             for entry in results.limit(top_k).collect()
         ]
 
-    def get_caption_info(self, query:str , top_k: int) -> List[Dict[str, Any]]:
+    def get_caption_info(self, query: str, top_k: int) -> List[Dict[str, Any]]:
         """Get caption information based on query similarity"""
 
         sims = self.video_index.frames_view.im_caption.similarity(query)
         results = self.video_index.frames_view.select(
-            self.video_index.frames_view.im_caption,
-            similarity=sims
+            self.video_index.frames_view.im_caption, similarity=sims
         ).order_by(sims, asc=False)
 
         return [
@@ -112,4 +114,3 @@ class VideoSearchEngine:
             }
             for entry in results.limit(top_k).collect()
         ]
-    

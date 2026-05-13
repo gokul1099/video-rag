@@ -9,7 +9,7 @@ from pixeltable.functions.huggingface import clip
 from pixeltable.functions.openai import embeddings, vision
 from pixeltable.functions.video import extract_audio
 from pixeltable.iterators import AudioSplitter
-from pixeltable.iterators.video import FrameIterator
+from pixeltable.functions.video import frame_iterator
 
 
 import kubrick_mcp.video.ingestion.registry as registry
@@ -24,7 +24,7 @@ logger = logger.bind(name="VideoProcessor")
 settings = get_settings()
 
 
-class VideoProcessor():
+class VideoProcessor:
     def __init__(self):
         self._pxt_cache: Optional[str] = None
         self._video_table = None
@@ -35,14 +35,16 @@ class VideoProcessor():
         logger.info(
             "Video Processor initialized",
             f"\n Split FPS: {settings.SPLIT_FRAMES_COUNT}",
-            f"\n Audio Chunk: {settings.AUDIO_CHUNK_LENGTH} seconds"
+            f"\n Audio Chunk: {settings.AUDIO_CHUNK_LENGTH} seconds",
         )
-    
+
     def setup_table(self, video_name: str):
         self._video_mapping_idx = video_name
         exists = self._check_if_exists(video_path=video_name)
         if exists:
-            logger.info(f"Video index {self._video_mapping_idx} already exists and is ready for use")
+            logger.info(
+                f"Video index {self._video_mapping_idx} already exists and is ready for use"
+            )
             cached_table: "CachedTable" = registry.get_table(self._video_mapping_idx)
             self.pxt_cache = cached_table.video_cache
             self.video_table = cached_table.video_table
@@ -57,14 +59,15 @@ class VideoProcessor():
             self._setup_table()
             logger.info("adding index to registry")
             registry.add_index_to_registry(
-                video_name= self._video_mapping_idx,
-                video_cache= self.pxt_cache,
-                frames_view_name= self.frames_view_name,
-                audio_view_name= self.audio_view_name
+                video_name=self._video_mapping_idx,
+                video_cache=self.pxt_cache,
+                frames_view_name=self.frames_view_name,
+                audio_view_name=self.audio_view_name,
             )
 
-            logger.info(f"Creating new video index `{self.video_table_name}' in '{self.pxt_cache}'")
-            
+            logger.info(
+                f"Creating new video index `{self.video_table_name}' in '{self.pxt_cache}'"
+            )
 
     def _check_if_exists(self, video_path) -> bool:
         """
@@ -72,7 +75,7 @@ class VideoProcessor():
         """
         existing_table = registry.get_registry()
         return video_path in existing_table
-    
+
     def _setup_table(self):
         logger.info("Setting up table")
         self._setup_cache_directory()
@@ -80,8 +83,6 @@ class VideoProcessor():
         self._setup_audio_processing()
         self._setup_frame_processing()
         logger.info("Done Setting up table")
-
-
 
     def _setup_cache_directory(self):
         logger.info(f"Creating cache path {self.pxt_cache}")
@@ -92,9 +93,9 @@ class VideoProcessor():
         self.video_table = pxt.create_table(
             self.video_table_name,
             schema={"video": pxt.Video},
-            if_exists="replace_force"
+            if_exists="replace_force",
         )
-    
+
     def _setup_audio_processing(self):
         logger.info("Setting up audio processing")
         self._add_audio_extraction()
@@ -104,12 +105,11 @@ class VideoProcessor():
         self._add_audio_embeding_index()
         logger.info("Done Setting up audio processing")
 
-
     def _add_audio_extraction(self):
         logger.info("adding audio extraction")
         self.video_table.add_computed_column(
             audio_extract=extract_audio(self.video_table.video, format="mp3"),
-            if_exists="ignore"
+            if_exists="ignore",
         )
         logger.info("Done adding audio extraction")
 
@@ -120,65 +120,65 @@ class VideoProcessor():
             self.video_table,
             iterator=AudioSplitter.create(
                 audio=self.video_table.audio_extract,
-                chunk_duration_sec = settings.AUDIO_CHUNK_LENGTH,
-                overlap_sec= settings.AUDIO_OVERLAP_SECONDS,
-                min_chunk_duration_sec=settings.AUDIO_MIN_CHUNK_DURATION_SECONDS
+                duration=settings.AUDIO_CHUNK_LENGTH,
+                overlap=settings.AUDIO_OVERLAP_SECONDS,
+                min_segment_duration=settings.AUDIO_MIN_CHUNK_DURATION_SECONDS,
             ),
-            if_exists="replace_force"
+            if_exists="replace_force",
         )
         logger.info("Done Creating audio chunks view")
-    
+
     def _add_audio_transcription(self):
         logger.info("Adding audio transcription")
         self.audio_chunks.add_computed_column(
             transcription=openai.transcriptions(
-                audio=self.audio_chunks.audio_chunk,
-                model=settings.AUDIO_TRANSCRIPT_MODEL
+                audio=self.audio_chunks.audio_segment,
+                model=settings.AUDIO_TRANSCRIPT_MODEL,
             ),
-            if_exists="ignore"
+            if_exists="ignore",
         )
         logger.info(" Done Adding audio transcription")
 
-    
     def _add_audio_text_extraction(self):
         logger.info("Adding audio text extraction")
 
         self.audio_chunks.add_computed_column(
             chunk_text=extract_text_from_chunk(self.audio_chunks.transcription),
-            if_exists="ignore"
+            if_exists="ignore",
         )
         logger.info("Done Adding audio text extraction")
-
 
     def _add_audio_embeding_index(self):
         logger.info("Adding audio embedding")
 
         self.audio_chunks.add_embedding_index(
             column=self.audio_chunks.chunk_text,
-            string_embed=embeddings.using(model=settings.TRANSCRIPT_SIMILARITY_EMBD_MODEL),
+            string_embed=embeddings.using(
+                model=settings.TRANSCRIPT_SIMILARITY_EMBD_MODEL
+            ),
             if_exists="ignore",
-            idx_name="chunks_index"
+            idx_name="chunks_index",
         )
         logger.info("Done Adding audio embedding")
 
-    
     def _setup_frame_processing(self):
         logger.info("Setting up frame processing")
         self._create_frames_view()
-        #While using huggingface for clip model it is downloaindg torcha and other module which causes out of space issue not removing frame index for now
+        # While using huggingface for clip model it is downloaindg torcha and other module which causes out of space issue not removing frame index for now
         # self._add_frame_embedding_index()
         self._add_frame_captioning()
         self._add_caption_embedding_index()
         logger.info("Done Setting up frame processing")
 
-    
     def _create_frames_view(self):
         logger.info("Creatin fames view")
         self.frames_view = pxt.create_view(
             self.frames_view_name,
             self.video_table,
-            iterator=FrameIterator.create(video=self.video_table.video, num_frames = settings.SPLIT_FRAMES_COUNT),
-            if_exists="ignore"
+            iterator=frame_iterator(
+                video=self.video_table.video, num_frames=settings.SPLIT_FRAMES_COUNT
+            ),
+            if_exists="ignore",
         )
         self.frames_view.add_computed_column(
             resized_frame=resize_image(
@@ -195,12 +195,11 @@ class VideoProcessor():
             im_caption=vision(
                 prompt=settings.CAPTION_MODEL_PROMPT,
                 image=self.frames_view.resized_frame,
-                model=settings.IMAGE_CAPTION_MODEL
+                model=settings.IMAGE_CAPTION_MODEL,
             )
         )
         logger.info("Done Adding frame captioning")
 
-    
     # def _add_frame_embedding_index(self):
     #     logger.info("Adding frame embedding index")
 
@@ -217,7 +216,7 @@ class VideoProcessor():
         self.frames_view.add_embedding_index(
             column=self.frames_view.im_caption,
             string_embed=embeddings.using(model=settings.CAPTION_SIMILARITY_EMBD_MODEL),
-            if_exists="replace_force"
+            if_exists="replace_force",
         )
         logger.info("Doen Adding caption embedding index")
 
@@ -229,7 +228,7 @@ class VideoProcessor():
             raise ValueError("Video table is not initialized. Call setup_table() first")
         logger.info(f"Adding video {video_path} to table {self.video_table_name}")
         new_video_path = re_encode_video(video_path=video_path)
-        logger.info(f'new video path {video_path}')
+        logger.info(f"new video path {video_path}")
         if new_video_path:
             self.video_table.insert([{"video": video_path}])
         return True

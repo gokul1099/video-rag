@@ -39,7 +39,7 @@ class ChatService:
             raise ValueError("Session ID not provided")
         if not self.agent_memory:
             raise ValueError("Pixeltable memory instace was not provided")
-        return self.agent_memory.get_by_session_id(session_id)
+        return self.agent_memory.get_by_session_id(str(session_id), n=limit)
 
     def create_session(self, user_id: int, title: str = "New Chat") -> ChatSession:
         """Create a new chat session for the user"""

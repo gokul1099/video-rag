@@ -3,10 +3,9 @@ services:
     container_name: postgres-db
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pixeltable
-      POSTRGRES_USER: postgres
+      POSTGRES_DB: kubrick
+      POSTGRES_USER: kubrick
+      POSTGRES_PASSWORD: kubrick_password
     ports:
       - "5432:5432"
     volumes:
@@ -15,7 +14,7 @@ services:
     networks:
       - agent-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U kubrick -d kubrick"]
       interval: 10s
       timeout: 5s
       retries: 5
