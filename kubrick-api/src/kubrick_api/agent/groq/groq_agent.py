@@ -197,26 +197,13 @@ class GroqAgent(BaseAgent):
             else:
                 tool_response = function_response
         
-            tool_context_message = {
-                "role":"user",
-                "content": f"Tool used: {tool_selection.tool_name}\n Result:{tool_response}"
-            }
-            chat_history.append(tool_context_message)
-            
-            # Store tool context to memory
-            self._add_to_memory(
-                "assistant", 
-                tool_context_message["content"], 
-                session_id, 
-            )
-
             response_model = (
                 GeneralResponseModel if tool_selection.tool_name == ToolChoice.ASK_QUESTION
                 else VideoClipResponseModel
             )
 
-            # Build a fresh message list with the general prompt so the LLM
-            # answers the question instead of trying to select a tool again.
+            # Fresh messages with general_system_prompt so the LLM
+            # answers from the video context, not the tool-selection prompt.
             followup_messages = [
                 {"role": "system", "content": self.general_system_prompt},
                 {"role": "user", "content": message},
@@ -294,11 +281,12 @@ class GroqAgent(BaseAgent):
         assitant_message: str,
         session_id,
         user_id,
-        clip_path: str | None = None,
+        user_clip_path: str | None = None,
+        assistant_clip_path: str | None = None,
     ) -> None:
-        self._add_to_memory("user", user_message, session_id, clip_path=clip_path)
+        self._add_to_memory("user", user_message, session_id, clip_path=user_clip_path)
         self._add_to_memory(
-            "assistant", assitant_message, session_id, clip_path=clip_path
+            "assistant", assitant_message, session_id, clip_path=assistant_clip_path
         )
 
     @opik.track(name="chat", type="general")
@@ -324,9 +312,20 @@ class GroqAgent(BaseAgent):
             logger.info("Running general response")
             response = self._response_general(message, session_id, video_path)
 
-        clip_path = response.clip_path if hasattr(response, "clip_path") else None
-        self._add_memory_pair(
-            message, response.message, session_id, user_id, clip_path=clip_path
-        )
+        # Store the user message
+        stored_user_message = message
+        if image_base64:
+            stored_user_message = f"[Image + Text] {message}"
 
-        return AssitantMessageResponse(**response.dict())
+        assistant_clip_path = response.clip_path if hasattr(response, "clip_path") else None
+        self._add_memory_pair(
+            stored_user_message, 
+            response.message, 
+            session_id, 
+            user_id, 
+            user_clip_path=video_path,
+            assistant_clip_path=assistant_clip_path
+        )
+        logger.info(f"Stored message pair to memory for session {session_id}")
+
+        return AssitantMessageResponse(**response.model_dump())

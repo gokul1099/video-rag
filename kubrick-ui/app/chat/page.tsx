@@ -101,11 +101,16 @@ function Main() {
     }
 
     // add user message locally
-    addMessage({ role: "user", content: message, ...(image_base64 && { image_base64 }) });
-
-    // prepare request body
     const validUploads = uploads.filter(u => u.video_path);
     const video_path = validUploads.length > 0 ? validUploads[0].video_path : null;
+    addMessage({ 
+      role: "user", 
+      content: message, 
+      ...(image_base64 && { image_base64 }),
+      ...(video_path && { clip_path: video_path })
+    });
+
+    // prepare request body
     const body = { message, video_path, image_base64: image_base64 ? image_base64.split(",")[1] : null };
 
     try {
@@ -132,7 +137,7 @@ function Main() {
       const data = await response.json();
 
       if (data.status === 'completed') {
-        updateMessage(msgId, { content: `✅ Video ready: ${fileName}`, clip_path: videoPath });
+        updateMessage(msgId, { content: `✅ Video ready: ${fileName}` });
         setIsProcessing(false);
       } else if (data.status === 'failed') {
         updateMessage(msgId, { content: `❌ Processing failed: ${fileName}` });

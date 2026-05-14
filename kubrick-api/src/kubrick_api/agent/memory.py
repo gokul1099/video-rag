@@ -41,7 +41,7 @@ class Memory:
         pxt.drop_dir(self.directory, if_not_exists="ignore", force=True)
 
     def insert(self, memory_record: MemoryRecord):
-        self._memory_table.insert([memory_record.dict()])
+        self._memory_table.insert([memory_record.model_dump()])
 
     def get_all(self) -> list[MemoryRecord]:
         return [MemoryRecord(**record) for record in self._memory_table.collect()]

@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from kubrick_api.db.models import ChatSession, ChatRole, ChatMessage
+from kubrick_api.db.models import ChatSession
 from typing import List, Optional
-from kubrick_api.agent.memory import Memory
+from kubrick_api.agent.memory import Memory, MemoryRecord
 
 import logging
 
@@ -15,13 +15,13 @@ class ChatService:
         self.db = db
         self.agent_memory = memory
 
-    def format_conversaion(self, messages: List[ChatMessage]):
+    def format_conversaion(self, messages: List[MemoryRecord]):
         """Format the messages form database into the chat_history format expected by agent"""
         history= []
         for msg in messages:
             history.append(
                 {
-                    "role": msg.role.value if hasattr(msg.role, 'value') else msg.role,
+                    "role": msg.role,
                     "content": msg.content
                 }
             )
@@ -33,12 +33,12 @@ class ChatService:
         ).order_by(ChatSession.updated_at.desc()).all()
         return sessions
 
-    def get_session_messages(self, session_id: int) -> List[ChatMessage]:
-        """Fetches chronological messages from a specific session"""
+    def get_session_messages(self, session_id: int) -> List[MemoryRecord]:
+        """Fetches chronological messages from a specific session from Pixeltable"""
         if not session_id:
             raise ValueError("Session ID not provided")
         if not self.agent_memory:
-            raise ValueError("Pixeltable memory instace was not provided")
+            raise ValueError("Pixeltable memory instance was not provided")
         return self.agent_memory.get_by_session_id(str(session_id))
 
     def create_session(self, user_id: int, title: str = "New Chat") -> ChatSession:
