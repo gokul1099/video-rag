@@ -2,6 +2,7 @@ import json
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from types import SimpleNamespace
 import instructor
 import opik
 from groq import Groq
@@ -19,6 +20,8 @@ from kubrick_api.models import (
     GeneralResponseModel,
     RoutingResponseModel,
     VideoClipResponseModel,
+    ToolSelectionResponse,
+    ToolChoice
 )
 
 logger.bind(name="GroqAgent")
@@ -118,6 +121,10 @@ class GroqAgent(BaseAgent):
         function_args["video_path"] = video_path
         if function_name == "get_vidoe_clip_from_image":
             function_args["user_image"] = image_base64
+            
+        # Fix LLM hallucinating 'question' instead of 'user_query'
+        if "question" in function_args and "user_query" not in function_args:
+            function_args["user_query"] = function_args.pop("question")
 
         logger.info(f"Executing tool: {function_name} with args {function_args}")
 
@@ -148,69 +155,90 @@ class GroqAgent(BaseAgent):
         )
         logger.info(f"Logging self tools{self.tools}")
 
-        response = (
-            self.client.chat.completions.create(
-                model=settings.GROQ_TOOL_USE_MODEL,
-                messages=chat_history,
-                tools=self.tools,
-                tool_choice="auto",
-                max_completion_tokens=4096,
-            )
-            .choices[0]
-            .message
+
+        tool_selection = self.instructor_client.chat.completions.create(
+            model=settings.GROQ_TOOL_USE_MODEL,
+            response_model=ToolSelectionResponse,
+            messages=chat_history
         )
-        tool_calls = response.tool_calls
-        logger.info(f"Tool calls: {tool_calls}")
 
-        if not tool_calls:
+        if not tool_selection:
             logger.info(f"No tool calls available, returning general response...")
-            return GeneralResponseModel(message=response.content)
+            return GeneralResponseModel(message=tool_selection.content)
+        logger.info(f"selected_tool_: {tool_selection.tool_name}")
+        logger.info(f"Reasoning: {tool_selection.reasoning}")
 
-        for tool_call in tool_calls:
-            logger.info(f"Calling execute tool call {tool_call}")
-            function_response = await self._execute_tool_call(
-                tool_call, video_path, image_base64
+        # Normalize parameters: ensure user_query is always present
+        params = tool_selection.parameters.copy()
+        if "question" in params and "user_query" not in params:
+            params["user_query"] = params.pop("question")
+        if "user_query" not in params:
+            params["user_query"] = message
+
+        function_args = {"video_path": video_path}
+
+        mock_tool_call = SimpleNamespace(
+            function= SimpleNamespace(
+                name=tool_selection.tool_name,
+                arguments=json.dumps(params)
             )
-            logger.info(f"Function response: {function_response}")
+        )
+        
+        logger.info(f"Executing tool: {tool_selection.tool_name} with args: {function_args}")
 
-            if tool_call.function.name == "get_video_clip_from_image":
+        try:
+            function_response = await self._execute_tool_call(
+                mock_tool_call,
+                video_path=video_path
+            )
+            logger.info(f"Fuction response: {function_response}")
+            if tool_selection.tool_name == "get_video_clip_from_image":
                 tool_response = f"This is the video context. Use it to answer the user's question: {function_response}"
             else:
                 tool_response = function_response
-
-            chat_history.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": tool_call.function.name,
-                    "content": tool_response,
-                }
+        
+            tool_context_message = {
+                "role":"user",
+                "content": f"Tool used: {tool_selection.tool_name}\n Result:{tool_response}"
+            }
+            chat_history.append(tool_context_message)
+            
+            # Store tool context to memory
+            self._add_to_memory(
+                "assistant", 
+                tool_context_message["content"], 
+                session_id, 
             )
 
             response_model = (
-                GeneralResponseModel
-                if tool_call.function.name == "ask_question_about_video"
+                GeneralResponseModel if tool_selection.tool_name == ToolChoice.ASK_QUESTION
                 else VideoClipResponseModel
             )
-            logger.info(f"Chat history: {chat_history}")
 
+            # Build a fresh message list with the general prompt so the LLM
+            # answers the question instead of trying to select a tool again.
+            followup_messages = [
+                {"role": "system", "content": self.general_system_prompt},
+                {"role": "user", "content": message},
+                {
+                    "role": "user",
+                    "content": f"Here is the relevant context retrieved from the video:\n\n{tool_response}\n\nUse this context to answer the user's question.",
+                },
+            ]
+
+            logger.info(f"Generating final response with model: {response_model.__name__}")
             followup_response = self.instructor_client.chat.completions.create(
-                model=settings.GROQ_TOOL_USE_MODEL,
-                messages=chat_history,
-                response_model=response_model,
+                model= settings.GROQ_TOOL_USE_MODEL,
+                messages=followup_messages,
+                response_model=response_model
             )
-
             if isinstance(followup_response, VideoClipResponseModel):
                 try:
-                    logger.info("Validation VideoClip response")
-                    self.validate_video_clip_response(followup_response, tool_response)
-
-                    logger.info(
-                        f"Tracing image from trimmed clip: {followup_response.clip_path}"
-                    )
-                    first_image_path = tools.sample_first_frame(
-                        followup_response.clip_path
-                    )
+                    logger.info("Validating VideoClip response")
+                    self.validate_video_clip_response(followup_response, function_response)
+                    
+                    logger.info(f"Tracing image from trimmed clip: {followup_response.clip_path}")
+                    first_image_path = tools.sample_first_frame(followup_response.clip_path)
                     opik_context.update_current_trace(
                         attachments=[
                             Attachment(data=first_image_path, content_type="image/png")
@@ -219,6 +247,12 @@ class GroqAgent(BaseAgent):
                 except ValueError as e:
                     logger.error(f"Failed to sample first frame from video: {e}")
             return followup_response
+        
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_selection.tool_name}: {str(e)}")
+            return GeneralResponseModel(
+                message=f"I encountered an error while processing your request: {str(e)}"
+            )
 
     @opik.track(name="generate-response", type="llm")
     def _response_general(
@@ -235,7 +269,11 @@ class GroqAgent(BaseAgent):
         return response
 
     def _add_to_memory(
-        self, role: str, content: str, session_id: int, user_id: int
+        self,
+        role: str,
+        content: str,
+        session_id: int,
+        clip_path: str | None = None,
     ) -> None:
         """Add a message to the agent's memory"""
         self.memory.insert(
@@ -245,15 +283,23 @@ class GroqAgent(BaseAgent):
                 content=content,
                 timestamp=datetime.now(),
                 session_id=str(session_id),
+                clip_path=clip_path,
             )
         )
 
     @opik.track(name="memory-insertion", type="general")
     def _add_memory_pair(
-        self, user_message: str, assitant_message: str, session_id, user_id
+        self,
+        user_message: str,
+        assitant_message: str,
+        session_id,
+        user_id,
+        clip_path: str | None = None,
     ) -> None:
-        self._add_to_memory("user", user_message, session_id, user_id)
-        self._add_to_memory("assistant", assitant_message, session_id, user_id)
+        self._add_to_memory("user", user_message, session_id, clip_path=clip_path)
+        self._add_to_memory(
+            "assistant", assitant_message, session_id, clip_path=clip_path
+        )
 
     @opik.track(name="chat", type="general")
     async def chat(
@@ -278,6 +324,9 @@ class GroqAgent(BaseAgent):
             logger.info("Running general response")
             response = self._response_general(message, session_id, video_path)
 
-        self._add_memory_pair(message, response.message, session_id, user_id)
+        clip_path = response.clip_path if hasattr(response, "clip_path") else None
+        self._add_memory_pair(
+            message, response.message, session_id, user_id, clip_path=clip_path
+        )
 
         return AssitantMessageResponse(**response.dict())

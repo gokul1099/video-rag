@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Dict, Any
 
 
 class TaskStatus(str, Enum):
@@ -53,3 +54,21 @@ class VideoClipResponseModel(BaseModel):
     )
     clip_path: str = Field(description="The path to the generated clip")
 
+class ToolChoice(str, Enum):
+    PROCESS_VIDEO = "process_video"
+    GET_CLIP_FROM_QUERY = "get_video_clip_from_user_query"
+    GET_CLIP_FROM_IMAGE = "get_video_clip_from_image"
+    ASK_QUESTION = "ask_question_about_video"
+
+class ToolSelectionResponse(BaseModel):
+    """Structured response for tool selection"""
+    tool_name: ToolChoice = Field(
+        description="The specific tool to use based on user intent"
+    )
+    parameters: Dict[str, Any] = Field(
+        description="Parameters to pass to the tool (e.g., {'user_query': '...'} or {'user_query': '...'})",
+        default_factory=dict
+    )
+    reasoning: str = Field(
+        description="Why this tool was selected for the user's request"
+    )

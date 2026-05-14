@@ -2,6 +2,8 @@ services:
   postgres:
     container_name: postgres-db
     image: postgres:16-alpine
+    logging:
+      driver: "none"
     environment:
       POSTGRES_DB: kubrick
       POSTGRES_USER: kubrick

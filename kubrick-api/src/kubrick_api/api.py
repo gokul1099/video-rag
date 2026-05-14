@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
     app.state.bg_task_states = {}
     yield
-    app.state.agent.reset_memory()
+    # app.state.agent.reset_memory()
     db = get_db_manager()
     db.shutdown()
 

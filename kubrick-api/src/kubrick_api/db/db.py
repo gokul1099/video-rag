@@ -24,7 +24,7 @@ class DatabaseManager:
         try:
             self.engine = create_engine(
             self.settings.DATABASE_URL,
-            echo=self.settings.DEBUG,
+            echo=False,
             pool_size=self.settings.DB_POOL_SIZE,
             max_overflow=10,
             pool_pre_ping=self.settings.DB_POOL_PRE_PING,

@@ -64,15 +64,15 @@ function Main() {
     setActiveSessionTitle(title);
     try {
       const data = await apiFetch<any[]>(`/chat/${sessionId}/messages`);
-      // Reverse messages if API returns them in descending order, otherwise remove reverse()
       loadMessages(
         data.map((m) => ({
-          id: m.message_id || uuidv4(),
+          id: m.message_id || m.id || uuidv4(),
           role: m.role,
           content: m.content,
-          timestamp: m.timestamp || new Date().toISOString(),
-          clip_path: m.video_path || m.clip_path, // handle field variations
-        })).reverse()
+          timestamp: m.timestamp || m.created_at || new Date().toISOString(),
+          clip_path: m.video_path || m.clip_path,
+          image_base64: m.image_url || m.image_base64,
+        }))
       );
     } catch (e) {
       console.error("Failed to fetch messages", e);
@@ -82,7 +82,7 @@ function Main() {
 
   const handleSendMessage = async (message: string, image_base64: string | null) => {
     let currentSessionId = activeSessionId;
-    
+
     // Create a new session if one is not active
     if (!currentSessionId) {
       try {
@@ -214,9 +214,9 @@ function Main() {
               Kubrick AI
             </h2>
           </div>
-          
+
           <div className="w-full mb-6">
-            <button 
+            <button
               onClick={handleNewChat}
               className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
             >
@@ -230,8 +230,8 @@ function Main() {
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-1">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Recent Chats</h3>
             {sessions.map(s => (
-              <button 
-                key={s.id} 
+              <button
+                key={s.id}
                 onClick={() => handleSessionClick(s.id, s.title)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate transition-colors ${activeSessionId === s.id ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
               >
@@ -247,11 +247,11 @@ function Main() {
         <div className="h-14 border-b border-white/10 flex items-center px-6 bg-white/5 backdrop-blur-sm sticky top-0 z-10">
           <h1 className="text-lg font-medium">{activeSessionTitle}</h1>
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-32">
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 mb-20">
           <MessageList messages={messages} />
         </div>
-        
+
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent pt-10 pb-6 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <MessageInput onSend={handleSendMessage} onVideoUpload={handleVideoUpload} disabled={isProcessing} />

@@ -1,4 +1,3 @@
-from kubrick_api.auth.schema import Token
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from kubrick_api.db.models import ChatSession, ChatRole, ChatMessage
@@ -33,13 +32,14 @@ class ChatService:
             ChatSession.user_id == user_id
         ).order_by(ChatSession.updated_at.desc()).all()
         return sessions
-    def get_session_messages(self,session_id: int, limit=20) -> List[ChatMessage]:
-        """Fetches chrnological messages from a specific sessions"""
+
+    def get_session_messages(self, session_id: int) -> List[ChatMessage]:
+        """Fetches chronological messages from a specific session"""
         if not session_id:
             raise ValueError("Session ID not provided")
         if not self.agent_memory:
             raise ValueError("Pixeltable memory instace was not provided")
-        return self.agent_memory.get_by_session_id(str(session_id), n=limit)
+        return self.agent_memory.get_by_session_id(str(session_id))
 
     def create_session(self, user_id: int, title: str = "New Chat") -> ChatSession:
         """Create a new chat session for the user"""
